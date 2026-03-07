@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "id": "my-first-plugin",
+  "name": "My First Plugin",
+  "version": "0.1.0",
+  "description": "Example starter plugin for Nutria",
+  "author": "Your Name",
+  "runtime_types": ["declarative_api"],
+  "default_scope": "store",
+  "required_secrets": [],
+  "remote_endpoints": [],
+  "capabilities": [],
+  "tags": ["example"]
+}
