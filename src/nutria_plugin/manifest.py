@@ -135,6 +135,7 @@ class PluginManifest(BaseModel):
     @field_validator("remote_endpoints")
     @classmethod
     def _validate_remote_endpoints(cls, value: List[str]) -> List[str]:
+        import ipaddress
         from urllib.parse import urlparse
 
         endpoints: List[str] = []
@@ -142,6 +143,23 @@ class PluginManifest(BaseModel):
             parsed = urlparse(item)
             if parsed.scheme not in {"http", "https"} or not parsed.netloc:
                 raise ValueError("remote_endpoints must be absolute http/https URLs")
+            # Block SSRF targets: localhost, loopback, private/link-local/reserved IP ranges.
+            hostname = parsed.hostname or ""
+            if hostname.lower() in ("localhost", "localhost.localdomain", ""):
+                raise ValueError(
+                    f"remote_endpoint {item!r} targets a private/internal address"
+                )
+            try:
+                ip = ipaddress.ip_address(hostname)
+            except ValueError:
+                ip = None  # hostname (not IP literal) — cannot statically determine
+
+            if ip is not None and (
+                ip.is_loopback or ip.is_private or ip.is_link_local or ip.is_reserved
+            ):
+                raise ValueError(
+                    f"remote_endpoint {item!r} targets a private/internal address"
+                )
             if item not in endpoints:
                 endpoints.append(item)
         return endpoints

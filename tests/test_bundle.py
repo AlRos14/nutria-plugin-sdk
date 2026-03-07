@@ -58,6 +58,22 @@ def test_validate_zip_blocked_python_file():
     assert any(".py" in e for e in errors)
 
 
+def test_validate_zip_unknown_extension_blocked():
+    data = _make_zip({MANIFEST_FILENAME: VALID_MANIFEST, "data.xyz": "stuff"})
+    errors = validate_zip(data)
+    assert any(".xyz" in e for e in errors)
+
+
+def test_validate_zip_no_extension_allowed():
+    data = _make_zip({MANIFEST_FILENAME: VALID_MANIFEST, "README": "# hello"})
+    assert validate_zip(data) == []
+
+
+def test_validate_zip_wsdl_allowed():
+    data = _make_zip({MANIFEST_FILENAME: VALID_MANIFEST, "specs/service.wsdl": "<wsdl/>"})
+    assert validate_zip(data) == []
+
+
 def test_validate_zip_path_traversal():
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w") as zf:
@@ -81,6 +97,17 @@ def test_validate_zip_oversized(monkeypatch):
     data = _make_zip({MANIFEST_FILENAME: VALID_MANIFEST, "big.md": "x" * 20})
     errors = validate_zip(data)
     assert any("size" in e for e in errors)
+
+
+def test_validate_zip_decompression_bomb(monkeypatch):
+    """A small compressed ZIP that exceeds the uncompressed size limit is rejected."""
+    import nutria_plugin.bundle as bundle_mod
+
+    monkeypatch.setattr(bundle_mod, "MAX_UNCOMPRESSED_SIZE_BYTES", 1024)
+    # Build a ZIP with 2KB of compressible data (above the 1KB mock limit)
+    data = _make_zip({MANIFEST_FILENAME: VALID_MANIFEST, "bomb.md": "A" * 2048})
+    errors = validate_zip(data)
+    assert any("uncompressed" in e for e in errors)
 
 
 def test_validate_zip_not_a_zip():

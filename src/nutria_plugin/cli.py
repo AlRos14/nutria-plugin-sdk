@@ -20,9 +20,19 @@ from pathlib import Path
 def _cmd_keygen(args: argparse.Namespace) -> int:
     from .signing import generate_keypair
 
+    out_stem = Path(args.out)
+    # Reject path traversal in the output stem
+    try:
+        resolved = out_stem.resolve()
+        cwd = Path.cwd().resolve()
+        resolved.relative_to(cwd)
+    except ValueError:
+        print(f"error: --out path must be within the current directory", file=sys.stderr)
+        return 1
+
     private_pem, public_pem = generate_keypair()
-    priv_file = Path(args.out).with_suffix(".pem")
-    pub_file = Path(args.out).with_suffix(".pub.pem")
+    priv_file = out_stem.with_suffix(".pem")
+    pub_file = out_stem.with_suffix(".pub.pem")
     priv_file.write_text(private_pem, encoding="utf-8")
     pub_file.write_text(public_pem, encoding="utf-8")
     print(f"Private key: {priv_file}")

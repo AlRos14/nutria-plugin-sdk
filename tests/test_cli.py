@@ -19,6 +19,12 @@ def test_cli_keygen(tmp_path, monkeypatch):
     assert (tmp_path / "mykey.pub.pem").exists()
 
 
+def test_cli_keygen_path_traversal_rejected(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    result = main(["keygen", "--out", "../../../tmp/evil"])
+    assert result == 1
+
+
 def test_cli_new_and_validate(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     result = main(["new", "test-plugin", "--name", "Test Plugin", "--dir", str(tmp_path / "out")])

@@ -98,6 +98,17 @@ def test_pack_plugin_with_signing(tmp_path):
     assert "signature" in manifest_dict
 
 
+def test_pack_plugin_rejects_symlinks(tmp_path):
+    src = tmp_path / "myplugin"
+    scaffold_plugin(src, "my-plugin")
+    target_file = tmp_path / "sensitive.txt"
+    target_file.write_text("secret data")
+    symlink = src / "leaked.txt"
+    symlink.symlink_to(target_file)
+    with pytest.raises(PackagingError, match="symlink"):
+        pack_plugin(src, tmp_path / "out.zip")
+
+
 def test_validate_plugin_dir_valid(tmp_path):
     src = tmp_path / "myplugin"
     scaffold_plugin(src, "my-plugin")

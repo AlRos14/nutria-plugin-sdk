@@ -17,23 +17,30 @@ from typing import Optional
 from .manifest import PluginManifest
 
 MANIFEST_FILENAME = "plugin.json"
-MAX_BUNDLE_SIZE_BYTES = 20 * 1024 * 1024  # 20 MB
+MAX_BUNDLE_SIZE_BYTES = 20 * 1024 * 1024   # 20 MB compressed
+MAX_UNCOMPRESSED_SIZE_BYTES = 100 * 1024 * 1024  # 100 MB total uncompressed
 
+# Allowlist — only these extensions are accepted inside a plugin ZIP.
+# Files with no extension (e.g. README, CHANGELOG) are also allowed.
 ALLOWED_EXTENSIONS = {
     ".json",
     ".md",
     ".txt",
     ".html",
+    ".htm",
     ".png",
     ".jpg",
     ".jpeg",
+    ".gif",
     ".svg",
     ".ico",
     ".xml",
+    ".wsdl",   # SOAP specs
     ".yaml",
     ".yml",
 }
 
+# Kept for backwards-compatible imports; no longer used in core validation.
 BLOCKED_PATTERNS = {".py", ".js", ".ts", ".sh", ".exe", ".dll", ".so", ".whl", ".tar"}
 
 
@@ -42,13 +49,18 @@ class PluginBundleError(Exception):
 
 
 def _safe_zip_path(name: str) -> PurePosixPath:
-    """Return a PurePosixPath for the ZIP entry or raise PluginBundleError on path traversal."""
+    """Return a PurePosixPath for the ZIP entry or raise PluginBundleError on path traversal.
+
+    Checks the raw string for traversal before PurePosixPath normalisation strips
+    any context (e.g. PurePosixPath("./x").parts == ("x",) — the '.' is gone).
+    """
+    if "//" in name or name.startswith("/"):
+        raise PluginBundleError(f"zip entry with absolute path is not allowed: {name!r}")
     path = PurePosixPath(name)
     if path.is_absolute():
         raise PluginBundleError(f"zip entry with absolute path is not allowed: {name!r}")
-    for part in path.parts:
-        if part in (".", ".."):
-            raise PluginBundleError(f"zip entry with path traversal is not allowed: {name!r}")
+    if ".." in path.parts:
+        raise PluginBundleError(f"zip entry with path traversal is not allowed: {name!r}")
     return path
 
 
@@ -73,6 +85,15 @@ def validate_zip(data: bytes) -> list[str]:
             if MANIFEST_FILENAME not in names:
                 errors.append(f"{MANIFEST_FILENAME} not found in bundle root")
 
+            # 2. zip bomb: check total uncompressed size before any extraction
+            total_uncompressed = sum(info.file_size for info in zf.infolist())
+            if total_uncompressed > MAX_UNCOMPRESSED_SIZE_BYTES:
+                errors.append(
+                    f"bundle uncompressed content exceeds max size "
+                    f"{MAX_UNCOMPRESSED_SIZE_BYTES // (1024 * 1024)} MB"
+                )
+                return errors
+
             for name in names:
                 try:
                     path = _safe_zip_path(name)
@@ -82,11 +103,11 @@ def validate_zip(data: bytes) -> list[str]:
 
                 suffix = path.suffix.lower()
 
-                # 2. no blocked executable/binary extensions
-                if suffix in BLOCKED_PATTERNS:
+                # 3. allowlist: only known-safe extensions (files with no extension are allowed)
+                if suffix and suffix not in ALLOWED_EXTENSIONS:
                     errors.append(f"file type not allowed in plugin bundle: {name!r}")
 
-                # 3. no hidden files
+                # 4. no hidden files
                 if any(part.startswith(".") for part in path.parts):
                     errors.append(f"hidden file/directory not allowed in plugin bundle: {name!r}")
 

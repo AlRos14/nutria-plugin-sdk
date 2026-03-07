@@ -91,13 +91,19 @@ def _collect_plugin_files(plugin_dir: Path) -> list[Path]:
     for path in sorted(plugin_dir.rglob("*")):
         if path.is_dir():
             continue
+        rel = path.relative_to(plugin_dir)
         # skip hidden files/dirs
-        if any(part.startswith(".") for part in path.relative_to(plugin_dir).parts):
+        if any(part.startswith(".") for part in rel.parts):
             continue
-        suffix = path.suffix.lower()
-        if suffix in BLOCKED_PATTERNS:
+        # reject symlinks — they could point outside the plugin directory
+        if path.is_symlink():
             raise PackagingError(
-                f"blocked file type {suffix!r} in plugin directory: {path.relative_to(plugin_dir)}"
+                f"symlinks are not allowed in plugin bundles: {rel}"
+            )
+        suffix = path.suffix.lower()
+        if suffix and suffix not in ALLOWED_EXTENSIONS:
+            raise PackagingError(
+                f"file type {suffix!r} not allowed in plugin bundle: {rel}"
             )
         files.append(path)
     return files
@@ -181,14 +187,15 @@ def validate_plugin_dir(plugin_dir: Path) -> list[str]:
     for path in plugin_dir.rglob("*"):
         if path.is_dir():
             continue
+        rel = path.relative_to(plugin_dir)
+        if any(part.startswith(".") for part in rel.parts):
+            errors.append(f"hidden file/directory: {rel}")
+            continue
+        if path.is_symlink():
+            errors.append(f"symlinks not allowed: {rel}")
+            continue
         suffix = path.suffix.lower()
-        if suffix in BLOCKED_PATTERNS:
-            errors.append(
-                f"blocked file type {suffix!r}: {path.relative_to(plugin_dir)}"
-            )
-        if any(part.startswith(".") for part in path.relative_to(plugin_dir).parts):
-            errors.append(
-                f"hidden file/directory: {path.relative_to(plugin_dir)}"
-            )
+        if suffix and suffix not in ALLOWED_EXTENSIONS:
+            errors.append(f"file type {suffix!r} not allowed: {rel}")
 
     return errors

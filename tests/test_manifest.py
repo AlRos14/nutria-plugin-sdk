@@ -89,10 +89,25 @@ def test_remote_endpoints_must_be_https():
         )
 
 
+@pytest.mark.parametrize("url", [
+    "http://localhost/api",
+    "http://127.0.0.1/api",
+    "http://0.0.0.0/api",
+    "http://169.254.169.254/latest/meta-data",
+    "http://10.0.0.1/internal",
+    "http://192.168.1.1/admin",
+    "http://172.16.0.1/service",
+    "http://[::1]/api",
+])
+def test_remote_endpoints_block_ssrf_targets(url):
+    with pytest.raises(ValidationError):
+        PluginManifest.model_validate(_minimal_manifest(remote_endpoints=[url]))
+
+
 def test_remote_endpoints_accept_http_and_https():
     m = PluginManifest.model_validate(
         _minimal_manifest(
-            remote_endpoints=["https://api.trello.com", "http://internal.lan/api"]
+            remote_endpoints=["https://api.trello.com", "http://api.example.com/v1"]
         )
     )
     assert len(m.remote_endpoints) == 2
