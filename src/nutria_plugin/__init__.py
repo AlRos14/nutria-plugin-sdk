@@ -1,4 +1,4 @@
-"""nutria_plugin — Nutria Plugin SDK
+"""nutria_plugin — Nutria Plugin SDK — v0.0.1-alpha
 
 Public API
 ----------
@@ -15,7 +15,9 @@ Signing:
     generate_keypair, sign_manifest, verify_manifest, SignatureStatus
 """
 
-from .bundle import PluginBundleError, extract_plugin_bundle, load_plugin_bundle, validate_zip
+__version__ = "0.0.1-alpha"
+
+
 from .manifest import (
     PluginCompatibility,
     PluginManifest,
@@ -27,6 +29,7 @@ from .packaging import PackagingError, pack_plugin, scaffold_plugin, validate_pl
 from .signing import SignatureStatus, generate_keypair, sign_manifest, verify_manifest
 
 __all__ = [
+    "__version__",
     # Manifest
     "PluginManifest",
     "PluginPaths",
