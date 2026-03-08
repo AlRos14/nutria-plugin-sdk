@@ -188,8 +188,9 @@ def validate_plugin_dir(plugin_dir: Path) -> list[str]:
         if path.is_dir():
             continue
         rel = path.relative_to(plugin_dir)
+        # Hidden files/dirs (e.g. .gitignore, .git/) are skipped by pack_plugin too;
+        # flag them only if they would cause a problem, not just because they exist.
         if any(part.startswith(".") for part in rel.parts):
-            errors.append(f"hidden file/directory: {rel}")
             continue
         if path.is_symlink():
             errors.append(f"symlinks not allowed: {rel}")
