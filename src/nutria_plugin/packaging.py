@@ -58,6 +58,9 @@ SCAFFOLD_TEMPLATE = {
 # Directories to create with no required placeholder files.
 SCAFFOLD_DIRS = ["connections", "skills", "context_docs", "specs", "assets"]
 
+# Top-level directories that are for developer use only and excluded from the ZIP.
+_EXCLUDED_TOP_DIRS = {"docs", "tests", "test", ".github", "examples", "example"}
+
 
 def scaffold_plugin(
     target_dir: Path,
@@ -95,6 +98,9 @@ def _collect_plugin_files(plugin_dir: Path) -> list[Path]:
         # skip hidden files/dirs
         if any(part.startswith(".") for part in rel.parts):
             continue
+        # skip developer-only top-level directories (docs/, tests/, examples/, etc.)
+        if rel.parts[0] in _EXCLUDED_TOP_DIRS:
+            continue
         # reject symlinks — they could point outside the plugin directory
         if path.is_symlink():
             raise PackagingError(
@@ -107,7 +113,6 @@ def _collect_plugin_files(plugin_dir: Path) -> list[Path]:
             )
         files.append(path)
     return files
-
 
 def pack_plugin(
     plugin_dir: Path,
