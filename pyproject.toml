@@ -18,6 +18,11 @@ dependencies = [
     "lxml>=4.9",
 ]
 
+[project.urls]
+Homepage = "https://github.com/AlRos14/nutria-plugin-sdk"
+Repository = "https://github.com/AlRos14/nutria-plugin-sdk"
+Changelog = "https://github.com/AlRos14/nutria-plugin-sdk/blob/main/CHANGELOG.md"
+
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0",
