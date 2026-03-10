@@ -104,6 +104,9 @@ def _collect_plugin_files(plugin_dir: Path) -> list[Path]:
         # skip hidden files/dirs
         if any(part.startswith(".") for part in rel.parts):
             continue
+        # skip Python bytecode cache directories at any depth
+        if "__pycache__" in rel.parts:
+            continue
         # skip developer-only top-level directories (docs/, tests/, examples/, etc.)
         if rel.parts[0] in _EXCLUDED_TOP_DIRS:
             continue
@@ -208,6 +211,9 @@ def validate_plugin_dir(plugin_dir: Path) -> list[str]:
         # Hidden files/dirs (e.g. .gitignore, .git/) are skipped by pack_plugin too;
         # flag them only if they would cause a problem, not just because they exist.
         if any(part.startswith(".") for part in rel.parts):
+            continue
+        # skip Python bytecode cache directories at any depth
+        if "__pycache__" in rel.parts:
             continue
         if rel.parts[0] in _EXCLUDED_TOP_DIRS:
             continue
