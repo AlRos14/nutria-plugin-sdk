@@ -8,3 +8,4 @@ dist/
 *.zip
 *.pem
 *.pub.pem
+src/nutria_plugin/_version.py

@@ -1,10 +1,10 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [project]
 name = "nutria-plugin"
-version = "0.0.1-alpha"
+dynamic = ["version"]
 description = "SDK for building, validating, signing, and packaging Nutria plugins"
 readme = "README.md"
 license = {text = "MIT"}
@@ -32,6 +32,12 @@ dev = [
 
 [project.scripts]
 nutria-plugin = "nutria_plugin.cli:main"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "src/nutria_plugin/_version.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/nutria_plugin"]
