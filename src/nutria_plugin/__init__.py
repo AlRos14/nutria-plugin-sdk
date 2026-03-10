@@ -1,4 +1,4 @@
-"""nutria_plugin — Nutria Plugin SDK — v0.0.1-alpha
+"""nutria_plugin — Nutria Plugin SDK
 
 Public API
 ----------
@@ -15,7 +15,10 @@ Signing:
     generate_keypair, sign_manifest, verify_manifest, SignatureStatus
 """
 
-__version__ = "0.0.1-alpha"
+try:
+    from ._version import __version__
+except ImportError:
+    __version__ = "0.0.0+unknown"
 
 
 from .manifest import (

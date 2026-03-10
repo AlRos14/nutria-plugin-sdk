@@ -60,6 +60,12 @@ SCAFFOLD_DIRS = ["connections", "skills", "context_docs", "specs", "assets"]
 
 # Top-level directories that are for developer use only and excluded from the ZIP.
 _EXCLUDED_TOP_DIRS = {"docs", "tests", "test", ".github", "examples", "example"}
+_EXCLUDED_ROOT_FILES = {
+    "pyproject.toml", "setup.py", "setup.cfg", "Makefile",
+    "Dockerfile", "docker-compose.yml", "docker-compose.yaml",
+    "uv.lock", "poetry.lock", "requirements.txt", "requirements-dev.txt",
+    ".python-version", "tox.ini",
+}
 
 
 def scaffold_plugin(
@@ -101,6 +107,9 @@ def _collect_plugin_files(plugin_dir: Path) -> list[Path]:
         # skip developer-only top-level directories (docs/, tests/, examples/, etc.)
         if rel.parts[0] in _EXCLUDED_TOP_DIRS:
             continue
+        # skip developer-only root files (pyproject.toml, Dockerfile, etc.)
+        if len(rel.parts) == 1 and rel.name.lower() in _EXCLUDED_ROOT_FILES:
+            continue
         # reject symlinks — they could point outside the plugin directory
         if path.is_symlink():
             raise PackagingError(
@@ -108,9 +117,12 @@ def _collect_plugin_files(plugin_dir: Path) -> list[Path]:
             )
         suffix = path.suffix.lower()
         if suffix and suffix not in ALLOWED_EXTENSIONS:
-            raise PackagingError(
-                f"file type {suffix!r} not allowed in plugin bundle: {rel}"
-            )
+            # Allow .py files inside mcp_server/ for remote_mcp plugins
+            in_mcp_server = len(rel.parts) >= 2 and rel.parts[0] == "mcp_server"
+            if not (suffix == ".py" and in_mcp_server):
+                raise PackagingError(
+                    f"file type {suffix!r} not allowed in plugin bundle: {rel}"
+                )
         files.append(path)
     return files
 
@@ -197,11 +209,17 @@ def validate_plugin_dir(plugin_dir: Path) -> list[str]:
         # flag them only if they would cause a problem, not just because they exist.
         if any(part.startswith(".") for part in rel.parts):
             continue
+        if rel.parts[0] in _EXCLUDED_TOP_DIRS:
+            continue
+        if len(rel.parts) == 1 and rel.name.lower() in _EXCLUDED_ROOT_FILES:
+            continue
         if path.is_symlink():
             errors.append(f"symlinks not allowed: {rel}")
             continue
         suffix = path.suffix.lower()
         if suffix and suffix not in ALLOWED_EXTENSIONS:
-            errors.append(f"file type {suffix!r} not allowed: {rel}")
+            in_mcp_server = len(rel.parts) >= 2 and rel.parts[0] == "mcp_server"
+            if not (suffix == ".py" and in_mcp_server):
+                errors.append(f"file type {suffix!r} not allowed: {rel}")
 
     return errors

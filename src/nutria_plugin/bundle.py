@@ -14,7 +14,7 @@ import zipfile
 from pathlib import Path, PurePosixPath
 from typing import Optional
 
-from .manifest import PluginManifest
+from .manifest import PluginManifest, PluginRuntimeType
 
 MANIFEST_FILENAME = "plugin.json"
 MAX_BUNDLE_SIZE_BYTES = 20 * 1024 * 1024   # 20 MB compressed
@@ -104,8 +104,11 @@ def validate_zip(data: bytes) -> list[str]:
                 suffix = path.suffix.lower()
 
                 # 3. allowlist: only known-safe extensions (files with no extension are allowed)
+                #    Exception: .py files are allowed inside mcp_server/ for remote_mcp plugins
                 if suffix and suffix not in ALLOWED_EXTENSIONS:
-                    errors.append(f"file type not allowed in plugin bundle: {name!r}")
+                    in_mcp_server = len(path.parts) >= 2 and path.parts[0] == "mcp_server"
+                    if not (suffix == ".py" and in_mcp_server):
+                        errors.append(f"file type not allowed in plugin bundle: {name!r}")
 
                 # 4. no hidden files
                 if any(part.startswith(".") for part in path.parts):
@@ -136,9 +139,21 @@ def load_plugin_bundle(data: bytes) -> PluginManifest:
         raise PluginBundleError(f"invalid zip file: {exc}")
 
     try:
-        return PluginManifest.from_json_bytes(raw)
+        manifest = PluginManifest.from_json_bytes(raw)
     except Exception as exc:
         raise PluginBundleError(f"invalid {MANIFEST_FILENAME}: {exc}") from exc
+
+    # Verify mcp_server/ .py files are only present in remote_mcp plugins
+    if PluginRuntimeType.REMOTE_MCP not in manifest.runtime_types:
+        with zipfile.ZipFile(io.BytesIO(data)) as zf:
+            for name in zf.namelist():
+                path = PurePosixPath(name)
+                if len(path.parts) >= 2 and path.parts[0] == "mcp_server" and path.suffix == ".py":
+                    raise PluginBundleError(
+                        "mcp_server/ with .py files is only allowed for remote_mcp plugins"
+                    )
+
+    return manifest
 
 
 def extract_plugin_bundle(data: bytes, target_dir: Path) -> PluginManifest:

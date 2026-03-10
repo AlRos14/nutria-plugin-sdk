@@ -77,6 +77,7 @@ class PluginPaths(BaseModel):
     hooks_file: str = "hooks/hooks.json"
     specs_dir: str = "specs"
     assets_dir: str = "assets"
+    mcp_server_dir: str = "mcp_server"
 
     @field_validator(
         "connections_dir",
@@ -86,6 +87,7 @@ class PluginPaths(BaseModel):
         "hooks_file",
         "specs_dir",
         "assets_dir",
+        "mcp_server_dir",
     )
     @classmethod
     def _validate_paths(cls, value: str) -> str:
@@ -109,6 +111,7 @@ class PluginManifest(BaseModel):
     remote_endpoints: List[str] = Field(default_factory=list)
     capabilities: List[str] = Field(default_factory=list)
     tags: List[str] = Field(default_factory=list)
+    mcp_server_entry: Optional[str] = None  # e.g. "server.py" inside mcp_server_dir
     homepage: Optional[str] = None
     license: Optional[str] = None
     signature: Optional[str] = None  # hex-encoded ECDSA-P256 DER signature
