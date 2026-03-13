@@ -107,6 +107,11 @@ def _collect_plugin_files(plugin_dir: Path) -> list[Path]:
         # skip Python bytecode cache directories at any depth
         if "__pycache__" in rel.parts:
             continue
+        # skip requirements.txt inside mcp_server/ — deps must be managed by
+        # the server operator; bundling them creates a misleading expectation
+        # that they will be auto-installed (security concern for marketplace plugins)
+        if rel.parts[0] == "mcp_server" and rel.name.lower() == "requirements.txt":
+            continue
         # skip developer-only top-level directories (docs/, tests/, examples/, etc.)
         if rel.parts[0] in _EXCLUDED_TOP_DIRS:
             continue
@@ -214,6 +219,11 @@ def validate_plugin_dir(plugin_dir: Path) -> list[str]:
             continue
         # skip Python bytecode cache directories at any depth
         if "__pycache__" in rel.parts:
+            continue
+        # skip requirements.txt inside mcp_server/ — deps must be managed by
+        # the server operator; bundling them creates a misleading expectation
+        # that they will be auto-installed (security concern for marketplace plugins)
+        if rel.parts[0] == "mcp_server" and rel.name.lower() == "requirements.txt":
             continue
         if rel.parts[0] in _EXCLUDED_TOP_DIRS:
             continue
