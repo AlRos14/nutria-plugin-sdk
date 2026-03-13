@@ -7,6 +7,27 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.0.1.3a1] — 2026-03-13
+
+### Changed
+
+- **`packaging.py`**: `mcp_server/requirements.txt` is now silently excluded
+  from plugin ZIPs at pack time (both `_collect_plugin_files` and
+  `validate_plugin_dir`). Bundling a requirements file inside `mcp_server/`
+  would create a misleading expectation that it is auto-installed, which is a
+  critical supply-chain risk for marketplace plugins. Plugin MCP server
+  dependencies must be installed by the server operator in the host environment.
+
+### Documentation
+
+- **`docs/security.md`**: Added "Dependency management" section explaining the
+  rationale for excluding `requirements.txt`, the standard runtime model, and
+  the roadmap for per-plugin venv support (marketplace Option D). Corrected the
+  "Allowed extensions" section — `.py` is allowed in `mcp_server/` for
+  `remote_mcp` plugins (exception not previously documented).
+
+---
+
 ## [0.0.1-alpha] — 2025-03-08
 
 Initial alpha release. API and file format are not yet stable.

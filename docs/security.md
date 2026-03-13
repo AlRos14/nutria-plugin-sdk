@@ -91,6 +91,19 @@ Only the following extensions are permitted inside a plugin ZIP:
 Any other extension (`.py`, `.js`, `.sh`, `.exe`, `.rb`, `.php`, etc.) is
 rejected. This prevents code injection through plugin installation.
 
+**Exception — `mcp_server/` in `remote_mcp` plugins**: `.py` files are allowed
+inside the `mcp_server/` directory for plugins that declare `remote_mcp` in
+`runtime_types`. All other directories still block `.py`.
+
+**`mcp_server/requirements.txt` is always excluded from ZIPs**: even though
+`.txt` is in the global allowlist, a file named `requirements.txt` directly
+inside `mcp_server/` is silently excluded at pack time. Plugin MCP server
+dependencies must be available in the Nutria server's Python environment
+(installed by the server operator). Bundling a requirements file would create
+a misleading expectation that it is automatically installed — which is a
+critical supply-chain risk in a public plugin marketplace. See
+[Dependency management](#dependency-management) below.
+
 ### Path safety
 
 - No absolute paths (e.g. `/etc/passwd`)
@@ -160,3 +173,46 @@ re-checked at runtime by the Nutria execution engine.
 - Rotate keys periodically; remove revoked keys from `NUTRIA_PLUGIN_TRUSTED_KEYS`.
 - Pin the `nutria-plugin` SDK version in your plugin build tooling.
 - Review connection files and WSDLs from third-party plugins before installing.
+
+---
+
+## Dependency management
+
+### Why `mcp_server/requirements.txt` is not supported in plugin ZIPs
+
+If a `requirements.txt` inside `mcp_server/` were auto-installed at plugin
+install time, any publisher (or attacker) could ship arbitrary packages that
+execute code on the host server during `pip install` (via build hooks or
+`setup.py`). This is a **critical** risk on a shared multi-tenant server.
+
+Even with per-plugin venv isolation, `pip install` itself executes untrusted
+Python from package build scripts.
+
+### What to do instead
+
+**As a plugin author:**
+- List your MCP server's dependencies in `requirements.txt` at the **repository
+  root** (not inside `mcp_server/`). This file is excluded from ZIPs and serves
+  as documentation for operators.
+- Write against the Nutria standard runtime where possible. The standard runtime
+  includes: `mcp[cli]`, `httpx`, `pydantic`, `lxml`, `zeep`, and common data
+  libraries. Plugins using only these packages have zero installation overhead.
+
+**As a server operator:**
+- Check the plugin's `requirements.txt` at the repository root before enabling it.
+- Install any extra dependencies into the Nutria server's Python environment:
+  ```bash
+  pip install -r /path/to/plugin-repo/requirements.txt
+  ```
+
+### Planned: per-plugin venv support (marketplace roadmap)
+
+A future release will support `requirements.lock` (hash-pinned) at the plugin
+root for verified marketplace plugins. Installation will use:
+- An isolated per-plugin venv (never modifies the host Python)
+- `--require-hashes --only-binary=:all:` (no build hook execution)
+- Nutria team review of `requirements.txt` before a plugin is listed as
+  "Verified" in the marketplace
+
+Unverified community plugins will continue to require manual operator
+installation of dependencies.
