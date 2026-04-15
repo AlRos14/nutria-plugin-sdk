@@ -94,6 +94,37 @@ class PluginPaths(BaseModel):
         return _validate_relative_path(value)
 
 
+class PluginAdminExtensionPlacement(str, Enum):
+    """Admin UI locations where a plugin can mount host-rendered extensions."""
+
+    PLUGINS_DETAIL = "plugins.detail"
+
+
+class PluginAdminExtensionKind(str, Enum):
+    """Host-rendered extension types supported by the admin frontend."""
+
+    TABLE = "table"
+
+
+class PluginAdminExtension(BaseModel):
+    """Declarative admin/frontend extension exposed by a plugin."""
+
+    id: str = Field(..., pattern=r"^[a-z][a-z0-9\-]*$", max_length=64)
+    title: str = Field(..., min_length=1, max_length=128)
+    description: Optional[str] = Field(default=None, max_length=512)
+    placement: PluginAdminExtensionPlacement = PluginAdminExtensionPlacement.PLUGINS_DETAIL
+    kind: PluginAdminExtensionKind = PluginAdminExtensionKind.TABLE
+    schema_path: str
+
+    @field_validator("schema_path")
+    @classmethod
+    def _validate_schema_path(cls, value: str) -> str:
+        path = _validate_relative_path(value)
+        if not path.lower().endswith(".json"):
+            raise ValueError("admin extension schema_path must point to a JSON file")
+        return path
+
+
 class PluginManifest(BaseModel):
     """Manifest stored in plugin.json — the single source of truth for plugin metadata."""
 
@@ -111,6 +142,7 @@ class PluginManifest(BaseModel):
     remote_endpoints: List[str] = Field(default_factory=list)
     capabilities: List[str] = Field(default_factory=list)
     tags: List[str] = Field(default_factory=list)
+    admin_extensions: List[PluginAdminExtension] = Field(default_factory=list)
     mcp_server_entry: Optional[str] = None  # e.g. "server.py" inside mcp_server_dir
     homepage: Optional[str] = None
     license: Optional[str] = None

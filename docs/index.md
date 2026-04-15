@@ -8,6 +8,7 @@ Developer reference for building, packaging, signing, and publishing Nutria plug
 |----------|-----------------|
 | [quickstart.md](quickstart.md) | Build and install your first plugin in 5 minutes |
 | [manifest.md](manifest.md) | Complete `plugin.json` field reference |
+| [admin-extensions.md](admin-extensions.md) | Declarative admin/frontend extensions for host-rendered plugin UI |
 | [connection-types.md](connection-types.md) | All 4 runtime types with annotated examples |
 | [skill-format.md](skill-format.md) | `SKILL.md` frontmatter schema and authoring guide |
 | [security.md](security.md) | Signing, trust policies, ZIP safety rules, secrets |
@@ -26,6 +27,7 @@ Plugins define:
 - **Context docs** — reference material injected into the persona's prompt
 - **Hooks** — event-driven actions (e.g. notify on shipment created)
 - **Settings schema** — admin-configurable options shown in the Nutria UI
+- **Admin extensions** — safe, declarative operator views rendered by the Nutria host
 
 ## Minimal plugin structure
 
@@ -48,6 +50,6 @@ my-plugin/
 
 ## Version
 
-This documentation describes `nutria-plugin` **v0.0.1-alpha**.
+This documentation describes `nutria-plugin` **v0.0.1.5b0**.
 
-API and file format compatibility are not yet guaranteed between alpha releases.
+API and file format compatibility are not yet guaranteed between pre-release releases.

@@ -33,6 +33,16 @@ directory as `plugin.json`.
   "remote_endpoints": ["https://api.myservice.com"],
   "capabilities": ["read", "write"],
   "tags": ["crm", "sales"],
+  "admin_extensions": [
+    {
+      "id": "email-audit",
+      "title": "Email Audit",
+      "description": "Inspect outbound emails from the plugin.",
+      "placement": "plugins.detail",
+      "kind": "table",
+      "schema_path": "assets/admin/email-audit.json"
+    }
+  ],
   "homepage": "https://github.com/myorg/my-plugin",
   "license": "MIT",
   "signature": null
@@ -210,6 +220,40 @@ Common values: `"read"`, `"write"`, `"notify"`, `"payments"`.
 Discovery tags shown in the plugin marketplace.
 
 Examples: `["crm", "sales"]`, `["shipping", "logistics", "soap"]`
+
+---
+
+### `admin_extensions` *(array of objects, optional)*
+
+Declarative admin/frontend extensions that ChatBotNutralia can render with its
+own host UI. This is the safe way for plugins to add operator-facing views
+without shipping arbitrary frontend code.
+
+Current supported values:
+
+- `placement`: `"plugins.detail"`
+- `kind`: `"table"`
+
+Example:
+
+```json
+"admin_extensions": [
+  {
+    "id": "email-audit",
+    "title": "Email Audit",
+    "description": "Inspect outbound emails from the plugin.",
+    "placement": "plugins.detail",
+    "kind": "table",
+    "schema_path": "assets/admin/email-audit.json"
+  }
+]
+```
+
+Rules:
+
+- `id` uses the same slug format as plugin ids: `^[a-z][a-z0-9\\-]*$`
+- `schema_path` must be a **relative** path inside the plugin bundle
+- `schema_path` must point to a **JSON** file
 
 ---
 

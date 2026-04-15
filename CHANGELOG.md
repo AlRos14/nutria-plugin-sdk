@@ -7,6 +7,37 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.0.1.5b0] — 2026-04-15
+
+### Added
+
+- **Declarative admin extensions** — `PluginManifest` now accepts
+  `admin_extensions`, a host-rendered frontend extension contract that lets
+  plugins declare safe operator-facing views for the Nutria admin UI.
+- **New manifest models** — added `PluginAdminExtension`,
+  `PluginAdminExtensionPlacement`, and `PluginAdminExtensionKind` to the shared
+  SDK schema so plugin authors can package frontend extensions without shipping
+  arbitrary browser code.
+
+### Documentation
+
+- **`docs/admin-extensions.md`**: new guide describing the host-rendered admin
+  extension model, supported placements/kinds, schema-file layout, and the
+  recommended packaging pattern for plugin-provided operator views.
+- **`docs/manifest.md`**: documented the `admin_extensions` field and its safe
+  `schema_path` contract.
+- **`docs/index.md`**: updated the documentation version and added the new admin
+  extensions guide to the index.
+
+### Notes
+
+- This release is the SDK-side foundation for plugin-driven frontend extension.
+  The first concrete consumer is the `nutria-email` plugin's Email Audit panel.
+- Requested release label: `0.0.1.5b`; published Python package version is
+  normalized to `0.0.1.5b0` under PEP 440.
+
+---
+
 ## [0.0.1.3a1] — 2026-03-13
 
 ### Changed

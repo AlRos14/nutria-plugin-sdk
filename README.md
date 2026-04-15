@@ -2,6 +2,9 @@
 
 SDK for building, validating, signing, and packaging Nutria plugins.
 
+This release also supports **declarative admin extensions**, allowing plugins
+to expose safe, host-rendered operator views inside ChatBotNutralia.
+
 ## Install
 
 ```bash
@@ -138,6 +141,19 @@ assert status == SignatureStatus.VERIFIED
 | `hooks/hooks.json` | Declarative hooks |
 | `settings.schema.json` | JSON Schema for configuration |
 | `assets/icon.png` | Plugin icon |
+
+## Admin frontend extensions
+
+Plugins can declare host-rendered admin UI extensions through
+`plugin.json -> admin_extensions`.
+
+These extensions are:
+
+- declared in plugin metadata
+- rendered by the Nutria host
+- safer than shipping arbitrary frontend code
+
+See [docs/admin-extensions.md](docs/admin-extensions.md) for the full contract.
 
 ### Security rules
 

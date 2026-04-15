@@ -7,7 +7,13 @@ import json
 import pytest
 from pydantic import ValidationError
 
-from nutria_plugin.manifest import PluginManifest, PluginRuntimeType, PluginScope
+from nutria_plugin.manifest import (
+    PluginAdminExtensionKind,
+    PluginAdminExtensionPlacement,
+    PluginManifest,
+    PluginRuntimeType,
+    PluginScope,
+)
 
 
 def _minimal_manifest(**overrides) -> dict:
@@ -133,3 +139,45 @@ def test_signature_field_excluded_from_none_dump():
     m = PluginManifest.model_validate(_minimal_manifest())
     dump = m.model_dump(mode="json", exclude_none=True)
     assert "signature" not in dump
+
+
+def test_admin_extensions_default_empty():
+    m = PluginManifest.model_validate(_minimal_manifest())
+    assert m.admin_extensions == []
+
+
+def test_admin_extension_parses():
+    m = PluginManifest.model_validate(
+        _minimal_manifest(
+            admin_extensions=[
+                {
+                    "id": "email-audit",
+                    "title": "Email audit",
+                    "description": "Inspect outbound plugin mail activity.",
+                    "placement": "plugins.detail",
+                    "kind": "table",
+                    "schema_path": "assets/admin/email-audit.json",
+                }
+            ]
+        )
+    )
+    extension = m.admin_extensions[0]
+    assert extension.id == "email-audit"
+    assert extension.placement == PluginAdminExtensionPlacement.PLUGINS_DETAIL
+    assert extension.kind == PluginAdminExtensionKind.TABLE
+    assert extension.schema_path == "assets/admin/email-audit.json"
+
+
+def test_admin_extension_schema_path_must_be_relative_json():
+    with pytest.raises(ValidationError):
+        PluginManifest.model_validate(
+            _minimal_manifest(
+                admin_extensions=[
+                    {
+                        "id": "email-audit",
+                        "title": "Email audit",
+                        "schema_path": "../email-audit.txt",
+                    }
+                ]
+            )
+        )
