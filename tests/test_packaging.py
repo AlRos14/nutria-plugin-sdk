@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 
 import pytest
 
@@ -129,3 +128,66 @@ def test_validate_plugin_dir_blocked_type(tmp_path):
     (src / "bad.py").write_text("pass")
     errors = validate_plugin_dir(src)
     assert any(".py" in e for e in errors)
+
+
+def test_validate_plugin_dir_accepts_admin_flow_schema(tmp_path):
+    src = tmp_path / "myplugin"
+    scaffold_plugin(src, "my-plugin")
+    flow_schema = src / "assets" / "admin" / "login-flow.json"
+    flow_schema.parent.mkdir(parents=True, exist_ok=True)
+    flow_schema.write_text(json.dumps({"type": "external_auth"}), encoding="utf-8")
+    manifest = json.loads((src / "plugin.json").read_text(encoding="utf-8"))
+    manifest["admin_flows"] = [
+        {
+            "id": "login-flow",
+            "title": "Login flow",
+            "kind": "external_auth",
+            "schema_path": "assets/admin/login-flow.json",
+        }
+    ]
+    (src / "plugin.json").write_text(json.dumps(manifest), encoding="utf-8")
+
+    assert validate_plugin_dir(src) == []
+    out = pack_plugin(src, tmp_path / "out.zip")
+    assert out.exists()
+
+
+def test_validate_plugin_dir_rejects_missing_admin_flow_schema(tmp_path):
+    src = tmp_path / "myplugin"
+    scaffold_plugin(src, "my-plugin")
+    manifest = json.loads((src / "plugin.json").read_text(encoding="utf-8"))
+    manifest["admin_flows"] = [
+        {
+            "id": "login-flow",
+            "title": "Login flow",
+            "kind": "external_auth",
+            "schema_path": "assets/admin/missing.json",
+        }
+    ]
+    (src / "plugin.json").write_text(json.dumps(manifest), encoding="utf-8")
+
+    errors = validate_plugin_dir(src)
+    assert any("schema_path not found" in e for e in errors)
+    with pytest.raises(PackagingError, match="schema_path not found"):
+        pack_plugin(src, tmp_path / "out.zip")
+
+
+def test_validate_plugin_dir_rejects_admin_flow_schema_type_mismatch(tmp_path):
+    src = tmp_path / "myplugin"
+    scaffold_plugin(src, "my-plugin")
+    flow_schema = src / "assets" / "admin" / "login-flow.json"
+    flow_schema.parent.mkdir(parents=True, exist_ok=True)
+    flow_schema.write_text(json.dumps({"type": "table"}), encoding="utf-8")
+    manifest = json.loads((src / "plugin.json").read_text(encoding="utf-8"))
+    manifest["admin_flows"] = [
+        {
+            "id": "login-flow",
+            "title": "Login flow",
+            "kind": "external_auth",
+            "schema_path": "assets/admin/login-flow.json",
+        }
+    ]
+    (src / "plugin.json").write_text(json.dumps(manifest), encoding="utf-8")
+
+    errors = validate_plugin_dir(src)
+    assert any("type must be 'external_auth'" in e for e in errors)

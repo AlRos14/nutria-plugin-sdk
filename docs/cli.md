@@ -82,6 +82,7 @@ Validation errors:
 Validation checks:
 - All `plugin.json` fields (see [manifest.md](manifest.md))
 - Required files present (`plugin.json`, at least one connection or skill)
+- Admin extension and admin flow schema files exist and contain valid JSON objects
 - No hidden files in the directory
 - No symlinks
 

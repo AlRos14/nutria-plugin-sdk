@@ -27,7 +27,7 @@ def _cmd_keygen(args: argparse.Namespace) -> int:
         cwd = Path.cwd().resolve()
         resolved.relative_to(cwd)
     except ValueError:
-        print(f"error: --out path must be within the current directory", file=sys.stderr)
+        print("error: --out path must be within the current directory", file=sys.stderr)
         return 1
 
     private_pem, public_pem = generate_keypair()

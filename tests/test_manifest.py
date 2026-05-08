@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-import json
-
 import pytest
 from pydantic import ValidationError
 
 from nutria_plugin.manifest import (
     PluginAdminExtensionKind,
     PluginAdminExtensionPlacement,
+    PluginAdminFlowKind,
+    PluginAdminFlowPlacement,
     PluginManifest,
     PluginRuntimeType,
     PluginScope,
@@ -177,6 +177,48 @@ def test_admin_extension_schema_path_must_be_relative_json():
                         "id": "email-audit",
                         "title": "Email audit",
                         "schema_path": "../email-audit.txt",
+                    }
+                ]
+            )
+        )
+
+
+def test_admin_flows_default_empty():
+    m = PluginManifest.model_validate(_minimal_manifest())
+    assert m.admin_flows == []
+
+
+def test_admin_flow_parses():
+    m = PluginManifest.model_validate(
+        _minimal_manifest(
+            admin_flows=[
+                {
+                    "id": "whatsapp-login",
+                    "title": "WhatsApp login",
+                    "description": "Pair a linked device.",
+                    "placement": "plugins.detail",
+                    "kind": "external_auth",
+                    "schema_path": "assets/admin/whatsapp-login-flow.json",
+                }
+            ]
+        )
+    )
+    flow = m.admin_flows[0]
+    assert flow.id == "whatsapp-login"
+    assert flow.placement == PluginAdminFlowPlacement.PLUGINS_DETAIL
+    assert flow.kind == PluginAdminFlowKind.EXTERNAL_AUTH
+    assert flow.schema_path == "assets/admin/whatsapp-login-flow.json"
+
+
+def test_admin_flow_schema_path_must_be_relative_json():
+    with pytest.raises(ValidationError):
+        PluginManifest.model_validate(
+            _minimal_manifest(
+                admin_flows=[
+                    {
+                        "id": "whatsapp-login",
+                        "title": "WhatsApp login",
+                        "schema_path": "../flow.txt",
                     }
                 ]
             )

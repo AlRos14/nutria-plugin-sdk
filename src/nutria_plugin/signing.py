@@ -16,7 +16,6 @@ from __future__ import annotations
 import json
 import os
 from enum import Enum
-from pathlib import Path
 from typing import Optional
 
 from cryptography.exceptions import InvalidSignature

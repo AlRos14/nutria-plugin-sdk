@@ -125,6 +125,37 @@ class PluginAdminExtension(BaseModel):
         return path
 
 
+class PluginAdminFlowPlacement(str, Enum):
+    """Admin UI locations where a plugin can mount host-rendered flows."""
+
+    PLUGINS_DETAIL = "plugins.detail"
+
+
+class PluginAdminFlowKind(str, Enum):
+    """Host-rendered operator flow types supported by the admin frontend."""
+
+    EXTERNAL_AUTH = "external_auth"
+
+
+class PluginAdminFlow(BaseModel):
+    """Declarative admin/operator flow exposed by a plugin."""
+
+    id: str = Field(..., pattern=r"^[a-z][a-z0-9\-]*$", max_length=64)
+    title: str = Field(..., min_length=1, max_length=128)
+    description: Optional[str] = Field(default=None, max_length=512)
+    placement: PluginAdminFlowPlacement = PluginAdminFlowPlacement.PLUGINS_DETAIL
+    kind: PluginAdminFlowKind = PluginAdminFlowKind.EXTERNAL_AUTH
+    schema_path: str
+
+    @field_validator("schema_path")
+    @classmethod
+    def _validate_schema_path(cls, value: str) -> str:
+        path = _validate_relative_path(value)
+        if not path.lower().endswith(".json"):
+            raise ValueError("admin flow schema_path must point to a JSON file")
+        return path
+
+
 class PluginManifest(BaseModel):
     """Manifest stored in plugin.json — the single source of truth for plugin metadata."""
 
@@ -143,6 +174,7 @@ class PluginManifest(BaseModel):
     capabilities: List[str] = Field(default_factory=list)
     tags: List[str] = Field(default_factory=list)
     admin_extensions: List[PluginAdminExtension] = Field(default_factory=list)
+    admin_flows: List[PluginAdminFlow] = Field(default_factory=list)
     mcp_server_entry: Optional[str] = None  # e.g. "server.py" inside mcp_server_dir
     homepage: Optional[str] = None
     license: Optional[str] = None

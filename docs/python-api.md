@@ -15,6 +15,9 @@ from nutria_plugin import (
     PluginCompatibility,
     PluginScope,
     PluginRuntimeType,
+    PluginAdminFlow,
+    PluginAdminFlowKind,
+    PluginAdminFlowPlacement,
     # Bundle operations
     PluginBundleError,
     load_plugin_bundle,

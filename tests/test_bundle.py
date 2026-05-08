@@ -5,13 +5,11 @@ from __future__ import annotations
 import io
 import json
 import zipfile
-from pathlib import Path
 
 import pytest
 
 from nutria_plugin.bundle import (
     MANIFEST_FILENAME,
-    MAX_BUNDLE_SIZE_BYTES,
     PluginBundleError,
     extract_plugin_bundle,
     load_plugin_bundle,

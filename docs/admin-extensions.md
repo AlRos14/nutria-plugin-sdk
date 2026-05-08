@@ -21,6 +21,10 @@ The goal is to let plugins expose operator-facing screens such as:
 without adding the security and compatibility burden of loading plugin-owned
 JavaScript inside the admin SPA.
 
+Use [admin-flows.md](admin-flows.md) instead of admin extensions for
+operator-driven workflows that invoke runtime actions, such as QR pairing or
+device-code login.
+
 ## Manifest field
 
 Plugins declare admin extensions in `plugin.json` through `admin_extensions`.

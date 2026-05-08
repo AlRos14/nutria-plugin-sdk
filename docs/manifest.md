@@ -43,6 +43,16 @@ directory as `plugin.json`.
       "schema_path": "assets/admin/email-audit.json"
     }
   ],
+  "admin_flows": [
+    {
+      "id": "external-login",
+      "title": "External login",
+      "description": "Complete an operator-driven linked-device or device-code login.",
+      "placement": "plugins.detail",
+      "kind": "external_auth",
+      "schema_path": "assets/admin/external-login-flow.json"
+    }
+  ],
   "homepage": "https://github.com/myorg/my-plugin",
   "license": "MIT",
   "signature": null
@@ -257,6 +267,45 @@ Rules:
 
 ---
 
+### `admin_flows` *(array of objects, optional)*
+
+Declarative operator workflows that ChatBotNutralia can render and drive through
+approved plugin runtime actions. Use this for non-secret interactive flows such
+as QR pairing, OAuth/device-code login, or phone-code verification.
+
+Current supported values:
+
+- `placement`: `"plugins.detail"`
+- `kind`: `"external_auth"`
+
+Example:
+
+```json
+"admin_flows": [
+  {
+    "id": "external-login",
+    "title": "External login",
+    "description": "Pair an external account without storing a static secret.",
+    "placement": "plugins.detail",
+    "kind": "external_auth",
+    "schema_path": "assets/admin/external-login-flow.json"
+  }
+]
+```
+
+Rules:
+
+- `id` uses the same slug format as plugin ids: `^[a-z][a-z0-9\\-]*$`
+- `schema_path` must be a **relative** path inside the plugin bundle
+- `schema_path` must point to a **JSON** file
+- The referenced schema JSON must contain `"type": "external_auth"`
+- Flow actions should reference plugin-owned runtime tools and must not embed
+  shell commands, secrets, arbitrary JavaScript, or host-specific code
+
+See [admin-flows.md](admin-flows.md) for the flow schema contract.
+
+---
+
 ### `homepage` *(string, optional)*
 
 URL to the plugin's repository or documentation page.
@@ -293,4 +342,5 @@ The following will cause validation errors:
 - `required_secrets` containing objects instead of strings
 - `remote_endpoints` targeting private/internal addresses
 - Any `paths` value that is absolute or contains `..`
+- Missing or invalid schema files referenced by `admin_extensions` or `admin_flows`
 - Fields not listed above (extra fields are forbidden — `"extra": "forbid"`)

@@ -22,6 +22,9 @@ except ImportError:
 
 
 from .manifest import (
+    PluginAdminFlow,
+    PluginAdminFlowKind,
+    PluginAdminFlowPlacement,
     PluginCompatibility,
     PluginManifest,
     PluginPaths,
@@ -39,6 +42,9 @@ __all__ = [
     "PluginCompatibility",
     "PluginScope",
     "PluginRuntimeType",
+    "PluginAdminFlow",
+    "PluginAdminFlowKind",
+    "PluginAdminFlowPlacement",
     # Bundle
     "PluginBundleError",
     "load_plugin_bundle",

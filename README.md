@@ -4,6 +4,8 @@ SDK for building, validating, signing, and packaging Nutria plugins.
 
 This release also supports **declarative admin extensions**, allowing plugins
 to expose safe, host-rendered operator views inside ChatBotNutralia.
+It also defines **declarative admin flows** for safe, host-rendered operator
+workflows such as QR/device-code login without shipping frontend code.
 
 ## Install
 
@@ -154,6 +156,14 @@ These extensions are:
 - safer than shipping arbitrary frontend code
 
 See [docs/admin-extensions.md](docs/admin-extensions.md) for the full contract.
+
+## Admin flows
+
+Plugins can declare host-rendered operator workflows through
+`plugin.json -> admin_flows`. Use this for non-secret interactive setup such as
+QR pairing, OAuth/device-code login, or phone-code verification.
+
+See [docs/admin-flows.md](docs/admin-flows.md) for the flow contract.
 
 ### Security rules
 

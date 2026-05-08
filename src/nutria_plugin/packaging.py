@@ -14,8 +14,8 @@ import zipfile
 from pathlib import Path
 from typing import Optional
 
-from .bundle import ALLOWED_EXTENSIONS, BLOCKED_PATTERNS, validate_zip
-from .manifest import PluginManifest, PluginPaths, PluginRuntimeType
+from .bundle import ALLOWED_EXTENSIONS, validate_zip
+from .manifest import PluginManifest
 
 
 class PackagingError(Exception):
@@ -134,6 +134,53 @@ def _collect_plugin_files(plugin_dir: Path) -> list[Path]:
         files.append(path)
     return files
 
+
+def _validate_declared_admin_assets(plugin_dir: Path, manifest: PluginManifest) -> list[str]:
+    """Validate schema assets referenced by admin extensions and flows."""
+    errors: list[str] = []
+    declared = [
+        (
+            f"admin_extensions[{idx}]",
+            extension.schema_path,
+            extension.kind.value,
+        )
+        for idx, extension in enumerate(manifest.admin_extensions)
+    ]
+    declared.extend(
+        (
+            f"admin_flows[{idx}]",
+            flow.schema_path,
+            flow.kind.value,
+        )
+        for idx, flow in enumerate(manifest.admin_flows)
+    )
+    root = plugin_dir.resolve()
+    for label, schema_path, expected_type in declared:
+        path = plugin_dir / schema_path
+        try:
+            path.resolve().relative_to(root)
+        except ValueError:
+            errors.append(f"{label}.schema_path points outside plugin directory: {schema_path}")
+            continue
+        if not path.exists():
+            errors.append(f"{label}.schema_path not found: {schema_path}")
+            continue
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            errors.append(f"{label}.schema_path is not valid JSON: {schema_path}: {exc}")
+            continue
+        if not isinstance(payload, dict):
+            errors.append(f"{label}.schema_path must contain a JSON object: {schema_path}")
+            continue
+        schema_type = payload.get("type")
+        if schema_type != expected_type:
+            errors.append(
+                f"{label}.schema_path type must be {expected_type!r}, got {schema_type!r}"
+            )
+    return errors
+
+
 def pack_plugin(
     plugin_dir: Path,
     output_path: Optional[Path] = None,
@@ -163,6 +210,10 @@ def pack_plugin(
         manifest = PluginManifest.from_file(manifest_path)
     except Exception as exc:
         raise PackagingError(f"invalid plugin.json: {exc}") from exc
+
+    asset_errors = _validate_declared_admin_assets(plugin_dir, manifest)
+    if asset_errors:
+        raise PackagingError("; ".join(asset_errors))
 
     if sign:
         if not private_key_pem:
@@ -205,9 +256,13 @@ def validate_plugin_dir(plugin_dir: Path) -> list[str]:
         return errors
 
     try:
-        PluginManifest.from_file(manifest_path)
+        manifest = PluginManifest.from_file(manifest_path)
     except Exception as exc:
         errors.append(f"invalid plugin.json: {exc}")
+        manifest = None
+
+    if manifest is not None:
+        errors.extend(_validate_declared_admin_assets(plugin_dir, manifest))
 
     for path in plugin_dir.rglob("*"):
         if path.is_dir():

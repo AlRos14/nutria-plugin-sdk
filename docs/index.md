@@ -9,6 +9,7 @@ Developer reference for building, packaging, signing, and publishing Nutria plug
 | [quickstart.md](quickstart.md) | Build and install your first plugin in 5 minutes |
 | [manifest.md](manifest.md) | Complete `plugin.json` field reference |
 | [admin-extensions.md](admin-extensions.md) | Declarative admin/frontend extensions for host-rendered plugin UI |
+| [admin-flows.md](admin-flows.md) | Declarative operator flows such as QR/device-code login |
 | [connection-types.md](connection-types.md) | All 4 runtime types with annotated examples |
 | [skill-format.md](skill-format.md) | `SKILL.md` frontmatter schema and authoring guide |
 | [security.md](security.md) | Signing, trust policies, ZIP safety rules, secrets |
@@ -28,6 +29,7 @@ Plugins define:
 - **Hooks** — event-driven actions (e.g. notify on shipment created)
 - **Settings schema** — admin-configurable options shown in the Nutria UI
 - **Admin extensions** — safe, declarative operator views rendered by the Nutria host
+- **Admin flows** — safe, declarative operator workflows such as external login/pairing
 
 ## Minimal plugin structure
 

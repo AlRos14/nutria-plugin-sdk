@@ -10,9 +10,9 @@ This module handles the ZIP lifecycle:
 from __future__ import annotations
 
 import io
+import json
 import zipfile
 from pathlib import Path, PurePosixPath
-from typing import Optional
 
 from .manifest import PluginManifest, PluginRuntimeType
 
@@ -80,10 +80,16 @@ def validate_zip(data: bytes) -> list[str]:
     try:
         with zipfile.ZipFile(io.BytesIO(data)) as zf:
             names = zf.namelist()
+            manifest: PluginManifest | None = None
 
             # 1. manifest must be present at the top level
             if MANIFEST_FILENAME not in names:
                 errors.append(f"{MANIFEST_FILENAME} not found in bundle root")
+            else:
+                try:
+                    manifest = PluginManifest.from_json_bytes(zf.read(MANIFEST_FILENAME))
+                except Exception as exc:
+                    errors.append(f"invalid {MANIFEST_FILENAME}: {exc}")
 
             # 2. zip bomb: check total uncompressed size before any extraction
             total_uncompressed = sum(info.file_size for info in zf.infolist())
@@ -114,10 +120,59 @@ def validate_zip(data: bytes) -> list[str]:
                 if any(part.startswith(".") for part in path.parts):
                     errors.append(f"hidden file/directory not allowed in plugin bundle: {name!r}")
 
+            if manifest is not None:
+                _validate_declared_admin_assets(zf, manifest, errors)
+
     except zipfile.BadZipFile as exc:
         errors.append(f"invalid zip file: {exc}")
 
     return errors
+
+
+def _validate_declared_admin_assets(
+    zf: zipfile.ZipFile,
+    manifest: PluginManifest,
+    errors: list[str],
+) -> None:
+    names = set(zf.namelist())
+    declared = [
+        (
+            f"admin_extensions[{idx}]",
+            extension.schema_path,
+            extension.kind.value,
+        )
+        for idx, extension in enumerate(manifest.admin_extensions)
+    ]
+    declared.extend(
+        (
+            f"admin_flows[{idx}]",
+            flow.schema_path,
+            flow.kind.value,
+        )
+        for idx, flow in enumerate(manifest.admin_flows)
+    )
+    for label, schema_path, expected_type in declared:
+        try:
+            safe_path = _safe_zip_path(schema_path)
+        except PluginBundleError as exc:
+            errors.append(f"{label}.schema_path invalid: {exc}")
+            continue
+        if safe_path.as_posix() not in names:
+            errors.append(f"{label}.schema_path not found in bundle: {schema_path!r}")
+            continue
+        try:
+            payload = json.loads(zf.read(safe_path.as_posix()).decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            errors.append(f"{label}.schema_path is not valid JSON: {schema_path!r}: {exc}")
+            continue
+        if not isinstance(payload, dict):
+            errors.append(f"{label}.schema_path must contain a JSON object: {schema_path!r}")
+            continue
+        schema_type = payload.get("type")
+        if schema_type != expected_type:
+            errors.append(
+                f"{label}.schema_path type must be {expected_type!r}, got {schema_type!r}"
+            )
 
 
 def load_plugin_bundle(data: bytes) -> PluginManifest:
