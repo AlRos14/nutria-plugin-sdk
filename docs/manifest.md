@@ -8,7 +8,7 @@ directory as `plugin.json`.
 
 ```json
 {
-  "schema_version": "1.0",
+  "schema_version": "1.1",
   "id": "my-plugin",
   "name": "My Plugin",
   "version": "0.1.0",
@@ -30,6 +30,7 @@ directory as `plugin.json`.
     "assets_dir": "assets"
   },
   "required_secrets": ["MY_API_KEY", "MY_API_SECRET"],
+  "optional_secrets": ["MY_REGION"],
   "remote_endpoints": ["https://api.myservice.com"],
   "capabilities": ["read", "write"],
   "tags": ["crm", "sales"],
@@ -63,7 +64,8 @@ directory as `plugin.json`.
 
 ### `schema_version` *(string, required)*
 
-Must be `"1.0"`. Future versions will increment this value.
+The manifest schema is `"1.1"`. Every plugin must declare this version;
+reviewable actions and their host-owned delivery contract are defined by it.
 
 ---
 
@@ -178,6 +180,45 @@ Defaults:
 
 ---
 
+## `settings.schema.json` host extensions
+
+Nutria plugin settings use JSON Schema as the base format, but ChatBotNutralia
+also recognizes a small host-specific extension for per-store admin rendering.
+
+### `x-nutria-store-scoped`
+
+When a settings field is declared as:
+
+```json
+{
+  "type": "object",
+  "default": {},
+  "additionalProperties": { "type": "string" },
+  "x-nutria-store-scoped": true,
+  "x-nutria-store-default-key": "default"
+}
+```
+
+ChatBotNutralia renders one input per loaded store plus one fallback input using
+`x-nutria-store-default-key` (defaulting to `default` when omitted).
+
+Expected persistence shape:
+
+```json
+{
+  "field_name": {
+    "nutrivip": "value-for-nutrivip",
+    "fire": "value-for-fire",
+    "default": "fallback-value"
+  }
+}
+```
+
+Use this only for settings whose values are truly store-specific. Plugins should
+still validate and interpret the stored object at runtime.
+
+---
+
 ### `required_secrets` *(array of strings, optional)*
 
 Names of secrets the plugin needs. The Nutria instance will prompt the
@@ -193,6 +234,12 @@ Example:
 ```json
 "required_secrets": ["STRIPE_API_KEY", "STRIPE_WEBHOOK_SECRET"]
 ```
+
+### `optional_secrets` *(array of strings, optional)*
+
+Secret names that improve a plugin's operation but are not required for
+installation. Values are never stored in the manifest. Names are deduplicated
+and resolved by the host's secret provider at runtime.
 
 ---
 
@@ -230,6 +277,20 @@ Common values: `"read"`, `"write"`, `"notify"`, `"payments"`.
 Discovery tags shown in the plugin marketplace.
 
 Examples: `["crm", "sales"]`, `["shipping", "logistics", "soap"]`
+
+---
+
+### `reviewable_actions` *(array of objects, optional; schema 1.1)*
+
+Reviewable-action contracts describe delivery adapters for drafts owned by
+ChatBotNutralia. Each contract selects a channel and `new`/`reply` mode,
+declares the plugin connection and final execution tool, and maps the SDK's
+semantic fields to the tool's argument names. `required_fields` must include
+`recipient` and `body`; `editable_fields` cannot overlap the immutable fields.
+Replies may declare a read-only `prepare_tool` adapter. It must not save a
+draft, send a message, or perform another external write. See
+[reviewable-actions.md](reviewable-actions.md) for the complete schema and
+offline/revalidation rules.
 
 ---
 

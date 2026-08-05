@@ -200,9 +200,9 @@ Python from package build scripts.
 
 **As a server operator:**
 - Check the plugin's `requirements.txt` at the repository root before enabling it.
-- Install any extra dependencies into the Nutria server's Python environment:
+- Install reviewed extra dependencies into the Nutria server environment through the normal `uv` deployment workflow, translating reviewed entries to explicit `uv add` arguments:
   ```bash
-  pip install -r /path/to/plugin-repo/requirements.txt
+  uv add "package>=version"
   ```
 
 ### Planned: per-plugin venv support (marketplace roadmap)
@@ -216,3 +216,62 @@ root for verified marketplace plugins. Installation will use:
 
 Unverified community plugins will continue to require manual operator
 installation of dependencies.
+
+---
+
+## Database-backed plugin rules
+
+Plugins that persist local runtime state (for example SQLite caches used by
+MCP servers) should stay dependency-light unless they need the full ORM feature
+set. A plugin may use Python's standard `sqlite3` module instead of SQLAlchemy
+when it keeps the plugin portable and avoids extra supply-chain surface.
+
+### Required rules
+
+- **Use bound parameters for every user- or LLM-controlled value**:
+  `conn.execute("SELECT ... WHERE id = ?", (email_id,))`.
+- **Never interpolate user input into SQL strings** with f-strings,
+  `%` formatting, `.format()`, or string concatenation.
+- **Keep dynamic SQL fragments code-owned**. If optional filters are needed,
+  choose fragments from constants defined by the plugin code and bind all
+  values separately.
+- **Centralize database access** in helper functions or a small repository
+  layer so queries are easy to audit.
+- **Keep local state under `mcp_server/.state/` or `NUTRIA_PLUGIN_STATE_DIR`**
+  and do not package that state in plugin ZIPs.
+- **Do not store secrets in the database** unless the host explicitly provides
+  encrypted secret storage for that purpose.
+
+### Acceptable patterns
+
+```python
+row = conn.execute(
+    "SELECT * FROM messages WHERE id = ?",
+    (message_id,),
+).fetchone()
+
+rows = conn.execute(
+    """
+    SELECT *
+    FROM messages
+    WHERE (? = '' OR LOWER(status) = ?)
+    ORDER BY created_at DESC
+    LIMIT ?
+    """,
+    (status, status, limit),
+).fetchall()
+```
+
+### Forbidden patterns
+
+```python
+conn.execute(f"SELECT * FROM messages WHERE id = '{message_id}'")
+conn.execute("SELECT * FROM messages WHERE status = " + status)
+```
+
+### When SQLAlchemy is appropriate
+
+Use SQLAlchemy or another reviewed database layer only when the plugin benefits
+from models, relationships, migrations, or shared application persistence. For
+small local plugin caches, parameterized `sqlite3` is usually safer operationally
+because it avoids unnecessary dependencies while still preventing SQL injection.

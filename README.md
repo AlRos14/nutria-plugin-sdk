@@ -10,8 +10,6 @@ workflows such as QR/device-code login without shipping frontend code.
 ## Install
 
 ```bash
-pip install nutria-plugin
-# or with uv
 uv add nutria-plugin
 ```
 
@@ -41,7 +39,7 @@ my-workspace-plugin/
 
 ```json
 {
-  "schema_version": "1.0",
+  "schema_version": "1.1",
   "id": "my-workspace-plugin",
   "name": "My Workspace Plugin",
   "version": "0.1.0",
@@ -49,6 +47,7 @@ my-workspace-plugin/
   "author": "Your Name",
   "runtime_types": ["declarative_api"],
   "required_secrets": ["API_KEY"],
+  "optional_secrets": ["API_REGION"],
   "remote_endpoints": ["https://api.myworkspace.com"]
 }
 ```
@@ -95,6 +94,40 @@ Configure the Nutria instance to trust your public key:
 ```bash
 export NUTRIA_PLUGIN_TRUSTED_KEYS='["-----BEGIN PUBLIC KEY-----\n..."]'
 ```
+
+
+## Store-Scoped Settings Fields
+
+ChatBotNutralia can render one settings input per loaded store for plugin
+fields that declare the host-specific metadata below in `settings.schema.json`:
+
+```json
+{
+  "store_dir": {
+    "type": "object",
+    "default": {},
+    "additionalProperties": { "type": "string" },
+    "x-nutria-store-scoped": true,
+    "x-nutria-store-default-key": "default"
+  }
+}
+```
+
+This is intended for plugins whose runtime values differ per store but are still
+managed from one shared admin UI. The host stores values as an object like:
+
+```json
+{
+  "store_dir": {
+    "nutrivip": "/app/cache/whatsapp/nutrivip/store",
+    "fire": "/app/cache/whatsapp/fire/store",
+    "default": "/app/cache/whatsapp/{store}/store"
+  }
+}
+```
+
+Plugins should treat this as a ChatBotNutralia host extension, not generic JSON
+Schema behavior.
 
 ## Python API
 
@@ -172,6 +205,9 @@ See [docs/admin-flows.md](docs/admin-flows.md) for the flow contract.
 - No absolute paths or path traversal in ZIP entries.
 - Maximum bundle size: 20 MB.
 - Secrets are **never** stored in the ZIP — they are configured after install.
+- Database-backed plugins must bind user/LLM values as SQL parameters. Standard
+  `sqlite3` is acceptable for small local state stores when queries are
+  centralized and no user input is interpolated into SQL strings.
 
 ## Runtime types
 

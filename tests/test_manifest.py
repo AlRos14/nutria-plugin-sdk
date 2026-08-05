@@ -18,7 +18,7 @@ from nutria_plugin.manifest import (
 
 def _minimal_manifest(**overrides) -> dict:
     base = {
-        "schema_version": "1.0",
+        "schema_version": "1.1",
         "id": "test-plugin",
         "name": "Test Plugin",
         "version": "1.0.0",
@@ -64,9 +64,14 @@ def test_version_must_be_semver():
         PluginManifest.model_validate(_minimal_manifest(version="1.0"))
 
 
-def test_schema_version_must_be_1_0():
+def test_schema_version_must_be_1_1():
     with pytest.raises(ValidationError):
         PluginManifest.model_validate(_minimal_manifest(schema_version="2.0"))
+
+
+def test_schema_version_1_0_is_rejected():
+    with pytest.raises(ValidationError):
+        PluginManifest.model_validate(_minimal_manifest(schema_version="1.0"))
 
 
 def test_empty_runtime_types_rejected():

@@ -6,14 +6,12 @@ fictional inventory REST API. It takes about 5 minutes.
 ## Prerequisites
 
 - Python 3.11+
-- `uv` (or `pip`)
+- `uv`
 
 ## 1. Install the SDK
 
 ```bash
 uv add nutria-plugin
-# or
-pip install nutria-plugin
 ```
 
 Verify:
@@ -49,7 +47,7 @@ Open `inventory-lookup/plugin.json` and fill it in:
 
 ```json
 {
-  "schema_version": "1.0",
+  "schema_version": "1.1",
   "id": "inventory-lookup",
   "name": "Inventory Lookup",
   "version": "0.1.0",
@@ -57,6 +55,7 @@ Open `inventory-lookup/plugin.json` and fill it in:
   "author": "Acme Corp <dev@acme.com>",
   "runtime_types": ["declarative_api"],
   "required_secrets": ["WAREHOUSE_API_KEY"],
+  "optional_secrets": ["WAREHOUSE_REGION"],
   "remote_endpoints": ["https://api.warehouse.acme.com"]
 }
 ```

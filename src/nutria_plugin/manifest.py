@@ -9,12 +9,13 @@ at install time).
 from __future__ import annotations
 
 import json
+import hashlib
 import re
 from enum import Enum
 from pathlib import Path, PurePosixPath
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 _SEMVER_RE = re.compile(
     r"^(0|[1-9]\d*)\."
@@ -23,6 +24,11 @@ _SEMVER_RE = re.compile(
     r"(?:-[0-9A-Za-z.-]+)?"
     r"(?:\+[0-9A-Za-z.-]+)?$"
 )
+
+
+def _enum_value(value: Any) -> str:
+    """Normalize enum members and JSON strings for cross-version Pydantic output."""
+    return str(value.value if isinstance(value, Enum) else value)
 
 
 def _validate_relative_path(value: str) -> str:
@@ -50,6 +56,164 @@ class PluginScope(str, Enum):
     STORE = "store"
     PERSONA = "persona"
 
+
+class ReviewableActionMode(str, Enum):
+    """How a host-owned reviewable action addresses a channel resource."""
+
+    NEW = "new"
+    REPLY = "reply"
+
+
+# The semantic vocabulary is deliberately small.  A plugin maps these stable
+# names to its own MCP/API argument names; it must not invent a second host
+# draft vocabulary.
+class ReviewableActionField(str, Enum):
+    """Stable host fields which may be mapped into a delivery tool."""
+
+    RECIPIENT = "recipient"
+    BODY = "body"
+    SUBJECT = "subject"
+    HTML_BODY = "html_body"
+    REPLY_TARGET = "reply_target"
+    SOURCE_REF = "source_ref"
+    ORDER_ID = "order_id"
+    AUDIT_CONTEXT = "audit_context"
+    IDEMPOTENCY_KEY = "idempotency_key"
+    SOURCE_FINGERPRINT = "source_fingerprint"
+    THREAD_ID = "thread_id"
+    CHANNEL = "channel"
+    MODE = "mode"
+
+
+class PreparationToolContract(BaseModel):
+    """Optional pure adapter used to resolve a reply envelope.
+
+    Preparation may read a connector and return structured provenance, but it
+    can never persist a draft or perform an external write.
+    """
+
+    name: str = Field(..., pattern=r"^[a-zA-Z][a-zA-Z0-9_-]{0,127}$")
+    external_write: bool = False
+    side_effect: str = Field(default="read", pattern=r"^(read|pure|none)$")
+
+    model_config = {"extra": "forbid"}
+
+    @model_validator(mode="after")
+    def _must_be_pure(self) -> "PreparationToolContract":
+        if self.external_write:
+            raise ValueError("preparation tools must be pure/read-only and cannot write externally")
+        return self
+
+
+class ReviewableActionContract(BaseModel):
+    """Contract between ChatBotNutralia's draft store and a plugin delivery tool."""
+
+    id: str = Field(..., pattern=r"^[a-z][a-z0-9\-]{0,63}$")
+    kind: str = Field(..., min_length=1, max_length=64, pattern=r"^[a-z][a-z0-9_\-]*$")
+    channel: str = Field(..., min_length=1, max_length=64, pattern=r"^[a-z][a-z0-9_\-]*$")
+    modes: List[ReviewableActionMode] = Field(..., min_length=1)
+    connection_id: str = Field(..., pattern=r"^[a-zA-Z][a-zA-Z0-9_\-]{0,127}$")
+    execute_tool: str = Field(..., pattern=r"^[a-zA-Z][a-zA-Z0-9_\-]{0,127}$")
+    prepare_tool: PreparationToolContract | None = None
+    argument_map: Dict[ReviewableActionField, str]
+    required_fields: List[ReviewableActionField] = Field(
+        default_factory=lambda: [
+            ReviewableActionField.RECIPIENT,
+            ReviewableActionField.BODY,
+        ]
+    )
+    editable_fields: List[ReviewableActionField] = Field(default_factory=list)
+    immutable_fields: List[ReviewableActionField] = Field(
+        default_factory=lambda: [
+            ReviewableActionField.RECIPIENT,
+            ReviewableActionField.SOURCE_REF,
+            ReviewableActionField.REPLY_TARGET,
+            ReviewableActionField.CHANNEL,
+            ReviewableActionField.MODE,
+        ]
+    )
+
+    model_config = {"extra": "forbid", "use_enum_values": True}
+
+    @field_validator("required_fields", "editable_fields", "immutable_fields")
+    @classmethod
+    def _dedupe_enums(cls, value: List[Any]) -> List[Any]:
+        result: List[Any] = []
+        for item in value:
+            if item not in result:
+                result.append(item)
+        return result
+
+    @field_validator("argument_map")
+    @classmethod
+    def _validate_argument_map(cls, value: Dict[ReviewableActionField, str]) -> Dict[ReviewableActionField, str]:
+        if not value:
+            raise ValueError("argument_map cannot be empty")
+        targets: set[str] = set()
+        for semantic, target in value.items():
+            target = str(target).strip()
+            if not re.fullmatch(r"^[a-zA-Z][a-zA-Z0-9_\-]{0,127}$", target):
+                raise ValueError(f"unsafe plugin argument mapping for {semantic}: {target!r}")
+            if target in targets:
+                raise ValueError("argument_map cannot map multiple semantic fields to one argument")
+            targets.add(target)
+            value[semantic] = target
+        return value
+
+    @model_validator(mode="after")
+    def _validate_contract(self) -> "ReviewableActionContract":
+        if len(self.modes) != len(set(self.modes)):
+            raise ValueError("modes must not contain duplicates")
+        required = {_enum_value(field) for field in self.required_fields}
+        mapped = {_enum_value(field) for field in self.argument_map}
+        missing = required - mapped
+        if missing:
+            raise ValueError(
+                "argument_map is missing required semantic fields: "
+                + ", ".join(sorted(missing))
+            )
+        required_baseline = {
+            ReviewableActionField.RECIPIENT.value,
+            ReviewableActionField.BODY.value,
+        }
+        if not required_baseline.issubset(required):
+            raise ValueError("required_fields must include recipient and body")
+        # Every external delivery must be replay-safe.  The host always sends
+        # the immutable action ID through this semantic field, so omitting it
+        # would make an otherwise valid contract unsafe to execute.
+        if ReviewableActionField.IDEMPOTENCY_KEY.value not in mapped:
+            raise ValueError("argument_map must include idempotency_key")
+        editable = {_enum_value(field) for field in self.editable_fields}
+        immutable = {_enum_value(field) for field in self.immutable_fields}
+        mandatory_immutable = {
+            ReviewableActionField.RECIPIENT.value,
+            ReviewableActionField.SOURCE_REF.value,
+            ReviewableActionField.SOURCE_FINGERPRINT.value,
+            ReviewableActionField.REPLY_TARGET.value,
+            ReviewableActionField.THREAD_ID.value,
+            ReviewableActionField.ORDER_ID.value,
+            ReviewableActionField.CHANNEL.value,
+            ReviewableActionField.MODE.value,
+        }
+        overlap = editable & (immutable | mandatory_immutable)
+        if overlap:
+            overlap_text = ", ".join(sorted(overlap))
+            raise ValueError(f"fields cannot be both editable and immutable: {overlap_text}")
+        if not editable.issubset(mapped):
+            missing_editable = editable - mapped
+            raise ValueError(
+                "editable_fields must be present in argument_map: "
+                + ", ".join(sorted(missing_editable))
+            )
+        if self.prepare_tool and self.prepare_tool.name == self.execute_tool:
+            raise ValueError("preparation and execution tools must be different")
+        return self
+
+    def fingerprint(self) -> str:
+        """Return a stable fingerprint used by the host for send-time checks."""
+        payload = self.model_dump(mode="json", exclude_none=True)
+        raw = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        return hashlib.sha256(raw).hexdigest()
 
 class PluginCompatibility(BaseModel):
     """Compatibility gates evaluated during install."""
@@ -159,7 +323,7 @@ class PluginAdminFlow(BaseModel):
 class PluginManifest(BaseModel):
     """Manifest stored in plugin.json — the single source of truth for plugin metadata."""
 
-    schema_version: str = Field(default="1.0", pattern=r"^1\.0$")
+    schema_version: str = Field(..., pattern=r"^1\.1$")
     id: str = Field(..., pattern=r"^[a-z][a-z0-9\-]*$", max_length=64)
     name: str = Field(..., min_length=1, max_length=128)
     version: str = Field(..., min_length=5, max_length=64)
@@ -170,9 +334,11 @@ class PluginManifest(BaseModel):
     compatibility: PluginCompatibility = Field(default_factory=PluginCompatibility)
     paths: PluginPaths = Field(default_factory=PluginPaths)
     required_secrets: List[str] = Field(default_factory=list)
+    optional_secrets: List[str] = Field(default_factory=list)
     remote_endpoints: List[str] = Field(default_factory=list)
     capabilities: List[str] = Field(default_factory=list)
     tags: List[str] = Field(default_factory=list)
+    reviewable_actions: List[ReviewableActionContract] = Field(default_factory=list)
     admin_extensions: List[PluginAdminExtension] = Field(default_factory=list)
     admin_flows: List[PluginAdminFlow] = Field(default_factory=list)
     mcp_server_entry: Optional[str] = None  # e.g. "server.py" inside mcp_server_dir
@@ -189,7 +355,7 @@ class PluginManifest(BaseModel):
             raise ValueError("plugin version must use semantic versioning")
         return value
 
-    @field_validator("required_secrets", "capabilities", "tags")
+    @field_validator("required_secrets", "optional_secrets", "capabilities", "tags")
     @classmethod
     def _dedupe_string_lists(cls, value: List[str]) -> List[str]:
         cleaned: List[str] = []
@@ -230,6 +396,13 @@ class PluginManifest(BaseModel):
             if item not in endpoints:
                 endpoints.append(item)
         return endpoints
+
+    @model_validator(mode="after")
+    def _validate_reviewable_actions(self) -> "PluginManifest":
+        ids = [contract.id for contract in self.reviewable_actions]
+        if len(ids) != len(set(ids)):
+            raise ValueError("reviewable_actions must not contain duplicate contract IDs")
+        return self
 
     @classmethod
     def from_json_bytes(cls, raw: bytes) -> "PluginManifest":

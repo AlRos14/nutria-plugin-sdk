@@ -15,6 +15,10 @@ from nutria_plugin import (
     PluginCompatibility,
     PluginScope,
     PluginRuntimeType,
+    ReviewableActionContract,
+    ReviewableActionField,
+    ReviewableActionMode,
+    PreparationToolContract,
     PluginAdminFlow,
     PluginAdminFlowKind,
     PluginAdminFlowPlacement,
@@ -58,6 +62,7 @@ manifest = PluginManifest.from_json_bytes(raw_bytes)
 print(manifest.id)             # "my-plugin"
 print(manifest.version)        # "0.1.0"
 print(manifest.runtime_types)  # [PluginRuntimeType.DECLARATIVE_API]
+print(manifest.reviewable_actions)
 
 # Write back to file
 manifest.to_file(Path("plugin.json"))
@@ -335,7 +340,7 @@ Sign a manifest dict and return the hex-encoded DER signature.
 ```python
 from nutria_plugin import sign_manifest
 
-manifest_dict = {"id": "my-plugin", "version": "0.1.0", ...}
+manifest_dict = {"schema_version": "1.1", "id": "my-plugin", "version": "0.1.0", ...}
 signature_hex = sign_manifest(manifest_dict, private_key_pem)
 
 # The signature is stored in plugin.json under the "signature" key

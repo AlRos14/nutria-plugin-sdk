@@ -15,22 +15,27 @@ Signing:
     generate_keypair, sign_manifest, verify_manifest, SignatureStatus
 """
 
-try:
-    from ._version import __version__
-except ImportError:
-    __version__ = "0.0.0+unknown"
+__version__ = "0.1.0"
 
 
 from .manifest import (
+    PluginAdminExtension,
+    PluginAdminExtensionKind,
+    PluginAdminExtensionPlacement,
     PluginAdminFlow,
     PluginAdminFlowKind,
     PluginAdminFlowPlacement,
     PluginCompatibility,
     PluginManifest,
     PluginPaths,
+    PreparationToolContract,
+    ReviewableActionContract,
+    ReviewableActionField,
+    ReviewableActionMode,
     PluginRuntimeType,
     PluginScope,
 )
+from .bundle import PluginBundleError, extract_plugin_bundle, load_plugin_bundle, validate_zip
 from .packaging import PackagingError, pack_plugin, scaffold_plugin, validate_plugin_dir
 from .signing import SignatureStatus, generate_keypair, sign_manifest, verify_manifest
 
@@ -42,9 +47,16 @@ __all__ = [
     "PluginCompatibility",
     "PluginScope",
     "PluginRuntimeType",
+    "PluginAdminExtension",
+    "PluginAdminExtensionKind",
+    "PluginAdminExtensionPlacement",
     "PluginAdminFlow",
     "PluginAdminFlowKind",
     "PluginAdminFlowPlacement",
+    "ReviewableActionContract",
+    "ReviewableActionMode",
+    "ReviewableActionField",
+    "PreparationToolContract",
     # Bundle
     "PluginBundleError",
     "load_plugin_bundle",

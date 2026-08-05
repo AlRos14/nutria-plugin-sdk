@@ -6,8 +6,6 @@ The `nutria-plugin` CLI is the primary tool for plugin development.
 
 ```bash
 uv add nutria-plugin
-# or
-pip install nutria-plugin
 ```
 
 ---

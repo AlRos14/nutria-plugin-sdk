@@ -7,6 +7,32 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.1.0] — 2026-08-04
+
+### Added
+
+- SDK manifest schema `1.1` and typed reviewable-action contracts for host-owned
+  drafts, immutable revisions, pure preparation adapters, and exact delivery.
+- `optional_secrets` and public exports for all contract models.
+- Validation for semantic mappings, editable/immutable fields, safe tool names,
+  and preparation side effects.
+
+## [Unreleased]
+
+### Documentation
+
+- **Database-backed plugin rules** — `docs/security.md` now documents the
+  standard for plugins with local state: keep small SQLite stores
+  dependency-light, use bound parameters for all user/LLM-controlled values,
+  avoid interpolated SQL, centralize database access, and reserve SQLAlchemy for
+  plugins that need ORM/migration capabilities.
+- **Store-scoped settings fields** — `README.md` and `docs/manifest.md` now
+  document the host-specific `x-nutria-store-scoped` settings schema contract
+  for plugins that need one admin field per loaded store plus a `default`
+  fallback.
+
+---
+
 ## [0.0.1.5b0] — 2026-04-15
 
 ### Added

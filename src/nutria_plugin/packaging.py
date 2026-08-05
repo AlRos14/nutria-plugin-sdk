@@ -25,7 +25,7 @@ class PackagingError(Exception):
 SCAFFOLD_TEMPLATE = {
     "plugin.json": lambda plugin_id, name: json.dumps(
         {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "id": plugin_id,
             "name": name,
             "version": "0.1.0",
@@ -117,6 +117,10 @@ def _collect_plugin_files(plugin_dir: Path) -> list[Path]:
             continue
         # skip developer-only root files (pyproject.toml, Dockerfile, etc.)
         if len(rel.parts) == 1 and rel.name.lower() in _EXCLUDED_ROOT_FILES:
+            continue
+        # Source checkouts commonly retain the last built bundle next to
+        # plugin.json. It is an output artifact, never a nested bundle member.
+        if len(rel.parts) == 1 and rel.suffix.lower() == ".zip":
             continue
         # reject symlinks — they could point outside the plugin directory
         if path.is_symlink():
@@ -283,6 +287,8 @@ def validate_plugin_dir(plugin_dir: Path) -> list[str]:
         if rel.parts[0] in _EXCLUDED_TOP_DIRS:
             continue
         if len(rel.parts) == 1 and rel.name.lower() in _EXCLUDED_ROOT_FILES:
+            continue
+        if len(rel.parts) == 1 and rel.suffix.lower() == ".zip":
             continue
         if path.is_symlink():
             errors.append(f"symlinks not allowed: {rel}")

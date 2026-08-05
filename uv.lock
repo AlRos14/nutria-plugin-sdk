@@ -262,6 +262,7 @@ wheels = [
 
 [[package]]
 name = "nutria-plugin"
+version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "cryptography" },

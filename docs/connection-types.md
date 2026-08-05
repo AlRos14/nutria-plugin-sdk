@@ -20,6 +20,10 @@ Examples:
 This name is used in `SKILL.md` `tools_required` and `authority_levels` fields,
 and in the Nutria approval log.
 
+Tools named by a `reviewable_actions` contract are host-executor internals.
+ChatBotNutralia removes those execution/preparation tools from model-facing
+schemas and invokes them only after the host action has been approved.
+
 ## Authority levels
 
 Every tool must declare an authority level that controls approval requirements.
