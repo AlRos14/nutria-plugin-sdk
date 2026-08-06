@@ -1,86 +1,150 @@
-# Reviewable actions
+# Reviewable actions and capability contracts
 
-Reviewable actions establish one boundary between a host and a delivery-only
-plugin:
+`nutria-plugin` 0.2.0 defines the contract between ChatBotNutralia and a
+delivery plugin. There is one draft system:
 
 ```text
-ChatBotNutralia: draft, revisions, approval, continuity, encrypted snapshot
-Plugin:         channel reads, optional pure resolution, exact delivery, audit
-SDK:            typed contract and validation
+ChatBotNutralia  ->  identity, draft, revisions, approval, continuity, receipts
+Plugin            ->  channel reads, pure preparation, exact delivery, audit
+SDK               ->  typed capability and reviewable-action contract
 ```
 
-## Contract schema
+Plugins do not save drafts and do not expose native `send_saved_*` operations.
+The host invokes a delivery capability only after a human approves the exact
+encrypted snapshot stored in `PreparedToolAction`.
 
-Add `schema_version: "1.1"` and one or more contracts to `plugin.json`:
+## Manifest version 2.0
+
+Every plugin manifest must declare `"schema_version": "2.0"`. The manifest
+contains typed capabilities and, when applicable, reviewable actions:
 
 ```json
 {
-  "id": "whatsapp-text",
-  "kind": "customer_message",
-  "channel": "whatsapp",
-  "modes": ["new", "reply"],
-  "connection_id": "nutria-whatsapp-wacli--wacli",
-  "execute_tool": "send_whatsapp_text",
-  "argument_map": {
-    "recipient": "recipient",
-    "body": "body",
-    "reply_target": "reply_to_message_id",
-    "audit_context": "audit_context_json",
-    "idempotency_key": "idempotency_key"
-  },
-  "required_fields": ["recipient", "body"],
-  "editable_fields": ["body"]
+  "schema_version": "2.0",
+  "id": "whatsapp-wacli",
+  "name": "WhatsApp WACLI",
+  "version": "1.0.0",
+  "description": "WhatsApp reads and exact approved delivery.",
+  "author": "Nutria",
+  "runtime_types": ["remote_mcp"],
+  "capabilities": [
+    {
+      "id": "whatsapp.send.text",
+      "title": "Send WhatsApp text",
+      "description": "Deliver the approved message without rewriting it.",
+      "effect": "external_write",
+      "tool": "send_whatsapp_text",
+      "connection_id": "nutria-whatsapp-wacli--wacli",
+      "model_callable": false,
+      "reviewable_action_id": "whatsapp-text",
+      "inputs": [
+        {"semantic_field": "recipient", "argument_name": "recipient"},
+        {"semantic_field": "body", "argument_name": "body"},
+        {"semantic_field": "reply_target", "argument_name": "reply_to_message_id", "required": false},
+        {"semantic_field": "audit_context", "argument_name": "audit_context_json", "required": false},
+        {"semantic_field": "idempotency_key", "argument_name": "idempotency_key"}
+      ],
+      "produces": [
+        {"field_name": "operation_ref", "output_name": "operation", "resource_type": "operation"}
+      ]
+    }
+  ],
+  "reviewable_actions": [
+    {
+      "id": "whatsapp-text",
+      "kind": "customer_message",
+      "channel": "whatsapp",
+      "modes": ["new", "reply"],
+      "connection_id": "nutria-whatsapp-wacli--wacli",
+      "execute_capability": "whatsapp.send.text",
+      "argument_map": {
+        "recipient": "recipient",
+        "body": "body",
+        "reply_target": "reply_to_message_id",
+        "audit_context": "audit_context_json",
+        "idempotency_key": "idempotency_key"
+      },
+      "required_fields": ["recipient", "body"],
+      "editable_fields": ["body"]
+    }
+  ]
 }
 ```
 
-`modes` is a list of `new` and/or `reply`. Semantic fields are selected from
-the SDK vocabulary (`recipient`, `body`, `subject`, `html_body`,
-`reply_target`, `source_ref`, `source_fingerprint`, `order_id`,
-`audit_context`, `idempotency_key`, `thread_id`, `channel`, and `mode`).
-Required and editable fields must be mapped. Recipient, source identity, reply
-target, channel, and mode are immutable by default; editable fields must not
-overlap immutable fields. Every delivery contract must map `idempotency_key`
-so the host can pass the immutable action ID and make retries safe.
+## Capability fields
 
-## Optional preparation adapters
+`CapabilityDescriptor` is the typed resource graph edge for one tool.
 
-Reply contracts may declare a pure adapter:
+- `id` is the stable capability identity used by the host.
+- `effect` is `read`, `prepare`, `write`, or `external_write`.
+- `tool` is the concrete connection tool name.
+- `connection_id` and `requirements` identify the runtime dependency.
+- `inputs` map semantic fields to tool arguments and may declare a resource type.
+- `consumes` and `produces` describe graph resources, not raw PII.
+- `model_callable=false` hides host-only delivery from the model.
+- `reviewable_action_id` links an external write to its host contract.
+
+The host rejects duplicate IDs, unknown references, unsafe names, inconsistent
+connections, duplicate semantic arguments, and a reviewable external write
+that is callable by the model.
+
+## Reviewable action fields
+
+`ReviewableActionContract` selects a channel and one or more modes (`new` or
+`reply`). Its `argument_map` maps the stable semantic vocabulary: `recipient`,
+`body`, `subject`, `html_body`, `reply_target`, `source_ref`,
+`source_fingerprint`, `order_id`, `audit_context`, `idempotency_key`,
+`thread_id`, `channel`, and `mode`.
+
+`recipient`, `source_ref`, `source_fingerprint`, `reply_target`, `order_id`,
+`channel`, and `mode` are immutable. Only fields listed in `editable_fields` may
+be patched. Required fields must be mapped, and every delivery contract must
+map `idempotency_key` so the host can pass the immutable action ID.
+
+## Pure reply preparation
+
+A reply may declare a preparation capability with `effect: "prepare"`:
 
 ```json
-"prepare_tool": {
-  "name": "prepare_email_reply",
-  "external_write": false,
-  "side_effect": "read"
+{
+  "id": "email.reply.prepare",
+  "title": "Resolve email reply envelope",
+  "description": "Read the source email and return thread metadata.",
+  "effect": "prepare",
+  "tool": "prepare_email_reply",
+  "connection_id": "email",
+  "model_callable": false
 }
 ```
 
-The host may call it after a verified source read to resolve the current
-recipient, subject, thread headers, and source fingerprint. It may not save a
-draft, mutate external state, or send anything. The final execution tool must
-send the host's exact reviewed payload; it must not regenerate the body.
+It may read the source email and return recipient, subject, thread headers, and
+a source fingerprint. It must not persist a draft, mutate the provider, or
+send. The execution capability receives the host's reviewed body and resolved
+envelope; it must not regenerate reviewed content.
+
+## Host workflow and offline behavior
+
+The host exposes `prepare_customer_message`, `inspect_customer_message`,
+`revise_customer_message`, and `send_customer_message`. A visible draft is
+always rendered from the encrypted host snapshot and has a host action ID.
+Each revision creates a new action ID and requires approval again. A plugin
+being unavailable sets `delivery_ready=false` but does not remove the local
+draft. Recovery revalidates the contract and source fingerprint; any changed
+envelope creates a new revision.
+
+Receipts use generic names (`reviewable_action.prepared`, `.read`, `.revised`,
+`.sent`) and contain IDs, status, revision, verified field names, and
+fingerprints only. Raw message bodies and recipient PII never appear in active
+task metadata or logs.
 
 ## Validation and packaging
-
-The SDK rejects duplicate contract IDs, unknown modes/semantic fields, unsafe
-connection/tool names or argument mappings, missing recipient/body/idempotency
-mappings, editable/immutable overlap, and preparation tools declared as
-external writes.
-Use the same commands in CI and before installation:
 
 ```bash
 uv sync --dev
 uv run nutria-plugin validate .
-uv run nutria-plugin pack . --output dist/my-plugin-0.1.0.zip
+uv run nutria-plugin pack . --output dist/my-plugin-1.0.0.zip
 uv run pytest
 ```
 
-`validate_zip` applies the same manifest and ZIP path-security checks used by
-the host installer.
-
-## Offline behavior
-
-If a plugin is installed but unhealthy, the host still prepares, inspects, and
-revises the encrypted action. It reports `delivery_ready: false` and does not
-send. Once the connector recovers, the host revalidates the contract. A changed
-delivery envelope or source fingerprint blocks the send and requires a new host
-revision and approval; the reviewed snapshot is never silently altered.
+`validate_zip` applies the same manifest, capability, and ZIP path-security
+checks used by the host installer.

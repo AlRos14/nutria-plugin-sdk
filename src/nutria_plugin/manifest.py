@@ -17,6 +17,8 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from .capabilities import CapabilityDescriptor, CapabilityEffect
+
 _SEMVER_RE = re.compile(
     r"^(0|[1-9]\d*)\."
     r"(0|[1-9]\d*)\."
@@ -113,8 +115,8 @@ class ReviewableActionContract(BaseModel):
     channel: str = Field(..., min_length=1, max_length=64, pattern=r"^[a-z][a-z0-9_\-]*$")
     modes: List[ReviewableActionMode] = Field(..., min_length=1)
     connection_id: str = Field(..., pattern=r"^[a-zA-Z][a-zA-Z0-9_\-]{0,127}$")
-    execute_tool: str = Field(..., pattern=r"^[a-zA-Z][a-zA-Z0-9_\-]{0,127}$")
-    prepare_tool: PreparationToolContract | None = None
+    execute_capability: str = Field(..., pattern=r"^[a-z][a-z0-9_.-]{0,127}$")
+    prepare_capability: str | None = Field(default=None, pattern=r"^[a-z][a-z0-9_.-]{0,127}$")
     argument_map: Dict[ReviewableActionField, str]
     required_fields: List[ReviewableActionField] = Field(
         default_factory=lambda: [
@@ -205,8 +207,8 @@ class ReviewableActionContract(BaseModel):
                 "editable_fields must be present in argument_map: "
                 + ", ".join(sorted(missing_editable))
             )
-        if self.prepare_tool and self.prepare_tool.name == self.execute_tool:
-            raise ValueError("preparation and execution tools must be different")
+        if self.prepare_capability and self.prepare_capability == self.execute_capability:
+            raise ValueError("preparation and execution capabilities must be different")
         return self
 
     def fingerprint(self) -> str:
@@ -323,7 +325,7 @@ class PluginAdminFlow(BaseModel):
 class PluginManifest(BaseModel):
     """Manifest stored in plugin.json — the single source of truth for plugin metadata."""
 
-    schema_version: str = Field(..., pattern=r"^1\.1$")
+    schema_version: str = Field(..., pattern=r"^2\.0$")
     id: str = Field(..., pattern=r"^[a-z][a-z0-9\-]*$", max_length=64)
     name: str = Field(..., min_length=1, max_length=128)
     version: str = Field(..., min_length=5, max_length=64)
@@ -336,7 +338,7 @@ class PluginManifest(BaseModel):
     required_secrets: List[str] = Field(default_factory=list)
     optional_secrets: List[str] = Field(default_factory=list)
     remote_endpoints: List[str] = Field(default_factory=list)
-    capabilities: List[str] = Field(default_factory=list)
+    capabilities: List[CapabilityDescriptor] = Field(default_factory=list)
     tags: List[str] = Field(default_factory=list)
     reviewable_actions: List[ReviewableActionContract] = Field(default_factory=list)
     admin_extensions: List[PluginAdminExtension] = Field(default_factory=list)
@@ -355,7 +357,7 @@ class PluginManifest(BaseModel):
             raise ValueError("plugin version must use semantic versioning")
         return value
 
-    @field_validator("required_secrets", "optional_secrets", "capabilities", "tags")
+    @field_validator("required_secrets", "optional_secrets", "tags")
     @classmethod
     def _dedupe_string_lists(cls, value: List[str]) -> List[str]:
         cleaned: List[str] = []
@@ -364,6 +366,92 @@ class PluginManifest(BaseModel):
             if item and item not in cleaned:
                 cleaned.append(item)
         return cleaned
+
+    @model_validator(mode="after")
+    def _validate_capability_references(self) -> "PluginManifest":
+        capability_ids = [capability.id for capability in self.capabilities]
+        if len(capability_ids) != len(set(capability_ids)):
+            raise ValueError("capabilities must not contain duplicate IDs")
+        action_ids_list = [action.id for action in self.reviewable_actions]
+        if len(action_ids_list) != len(set(action_ids_list)):
+            raise ValueError("reviewable_actions must not contain duplicate contract IDs")
+        capability_map = {capability.id: capability for capability in self.capabilities}
+        action_ids = set(action_ids_list)
+        for action in self.reviewable_actions:
+            execute = capability_map.get(action.execute_capability)
+            if execute is None:
+                raise ValueError(
+                    f"reviewable action {action.id!r} references unknown execution capability "
+                    f"{action.execute_capability!r}"
+                )
+            if execute.effect != CapabilityEffect.EXTERNAL_WRITE:
+                raise ValueError("reviewable execution capability must use external_write")
+            if execute.model_callable:
+                raise ValueError("reviewable execution capability must be host-only")
+            if execute.connection_id != action.connection_id:
+                raise ValueError("reviewable execution capability connection does not match action")
+            if execute.reviewable_action_id != action.id:
+                raise ValueError(
+                    "reviewable execution capability must name its reviewable action"
+                )
+            execute_inputs = {
+                str(item.semantic_field): item for item in execute.inputs
+            }
+            for semantic, target in action.argument_map.items():
+                semantic_name = _enum_value(semantic)
+                input_binding = execute_inputs.get(semantic_name)
+                if input_binding is None:
+                    raise ValueError(
+                        f"argument_map semantic field {semantic_name!r} is not declared "
+                        f"by execution capability {execute.id!r}"
+                    )
+                if input_binding.argument_name != target:
+                    raise ValueError(
+                        f"argument_map for {semantic_name!r} must use the capability "
+                        f"argument {input_binding.argument_name!r}"
+                    )
+            missing_inputs = {
+                str(item.semantic_field)
+                for item in execute.inputs
+                if item.required and str(item.semantic_field) not in action.argument_map
+            }
+            if missing_inputs:
+                raise ValueError(
+                    "argument_map is missing required execution inputs: "
+                    + ", ".join(sorted(missing_inputs))
+                )
+            if action.prepare_capability:
+                prepare = capability_map.get(action.prepare_capability)
+                if prepare is None:
+                    raise ValueError(
+                        f"reviewable action {action.id!r} references unknown preparation capability "
+                        f"{action.prepare_capability!r}"
+                    )
+                if prepare.effect != CapabilityEffect.PREPARE:
+                    raise ValueError("reviewable preparation capability must use effect=prepare")
+                if prepare.connection_id != action.connection_id:
+                    raise ValueError(
+                        "reviewable preparation capability connection does not match action"
+                    )
+        orphan_refs = {
+            capability.reviewable_action_id
+            for capability in self.capabilities
+            if capability.reviewable_action_id
+        } - action_ids
+        if orphan_refs:
+            raise ValueError("capabilities reference unknown reviewable action IDs")
+        for capability in self.capabilities:
+            if capability.reviewable_action_id:
+                action = next(
+                    item
+                    for item in self.reviewable_actions
+                    if item.id == capability.reviewable_action_id
+                )
+                if action.execute_capability != capability.id:
+                    raise ValueError(
+                        "reviewable_action_id may only be declared on the action execution capability"
+                    )
+        return self
 
     @field_validator("remote_endpoints")
     @classmethod
@@ -396,13 +484,6 @@ class PluginManifest(BaseModel):
             if item not in endpoints:
                 endpoints.append(item)
         return endpoints
-
-    @model_validator(mode="after")
-    def _validate_reviewable_actions(self) -> "PluginManifest":
-        ids = [contract.id for contract in self.reviewable_actions]
-        if len(ids) != len(set(ids)):
-            raise ValueError("reviewable_actions must not contain duplicate contract IDs")
-        return self
 
     @classmethod
     def from_json_bytes(cls, raw: bytes) -> "PluginManifest":

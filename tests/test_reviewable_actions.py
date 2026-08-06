@@ -15,8 +15,8 @@ def _contract(**overrides):
         "channel": "email",
         "modes": ["reply"],
         "connection_id": "email",
-        "prepare_tool": {"name": "prepare_reply", "external_write": False},
-        "execute_tool": "send_reply",
+        "prepare_capability": "email.reply.prepare",
+        "execute_capability": "email.send.reply",
         "argument_map": {
             "recipient": "recipient",
             "body": "body",
@@ -33,15 +33,40 @@ def _contract(**overrides):
     return data
 
 
+def _capabilities():
+    return [
+        {
+            "id": "email.reply.prepare",
+            "title": "Prepare email reply",
+            "description": "Resolve the source email envelope without writing.",
+            "effect": "prepare",
+            "tool": "prepare_email_reply",
+            "connection_id": "email",
+            "model_callable": True,
+        },
+        {
+            "id": "email.send.reply",
+            "title": "Send email reply",
+            "description": "Deliver the exact approved email reply.",
+            "effect": "external_write",
+            "tool": "send_resolved_email_reply",
+            "connection_id": "email",
+            "model_callable": False,
+            "reviewable_action_id": "email-reply",
+        },
+    ]
+
+
 def _manifest(**overrides):
     data = {
-        "schema_version": "1.1",
+        "schema_version": "2.0",
         "id": "email-plugin",
         "name": "Email",
         "version": "1.0.0",
         "description": "Email delivery",
         "author": "Nutria",
         "runtime_types": ["remote_mcp"],
+        "capabilities": _capabilities(),
         "reviewable_actions": [_contract()],
     }
     data.update(overrides)
@@ -50,16 +75,16 @@ def _manifest(**overrides):
 
 def test_contract_has_stable_fingerprint():
     contract = ReviewableActionContract.model_validate(_contract())
-    assert contract.prepare_tool is not None
-    assert contract.prepare_tool.name == "prepare_reply"
+    assert contract.execute_capability == "email.send.reply"
+    assert contract.prepare_capability == "email.reply.prepare"
     assert contract.fingerprint() == ReviewableActionContract.model_validate(
         _contract()
     ).fingerprint()
 
 
-def test_schema_10_is_rejected():
+def test_schema_1_x_is_rejected():
     with pytest.raises(ValidationError):
-        PluginManifest.model_validate(_manifest(schema_version="1.0", reviewable_actions=[]))
+        PluginManifest.model_validate(_manifest(schema_version="1.1"))
 
 
 def test_schema_version_is_required():
@@ -81,8 +106,7 @@ def test_duplicate_contract_ids_rejected():
         {"editable_fields": ["recipient"]},
         {"argument_map": {"recipient": "to", "body": "to"}},
         {"argument_map": {"body": "body"}},
-        {"prepare_tool": {"name": "send_reply", "external_write": False}},
-        {"prepare_tool": {"name": "prepare_reply", "external_write": True}},
+        {"prepare_capability": "email.send.reply"},
     ],
 )
 def test_invalid_contracts_rejected(override):
@@ -97,3 +121,24 @@ def test_invalid_connection_and_argument_names_rejected():
         ReviewableActionContract.model_validate(
             _contract(argument_map={"recipient": "recipient", "body": "bad key"})
         )
+
+
+def test_unknown_capability_reference_rejected():
+    with pytest.raises(ValidationError, match="unknown execution capability"):
+        PluginManifest.model_validate(
+            _manifest(reviewable_actions=[_contract(execute_capability="email.send.missing")])
+        )
+
+
+def test_reviewable_external_write_must_be_host_only():
+    capabilities = _capabilities()
+    capabilities[1]["model_callable"] = True
+    with pytest.raises(ValidationError):
+        PluginManifest.model_validate(_manifest(capabilities=capabilities))
+
+
+def test_preparation_capability_must_be_pure_prepare():
+    capabilities = _capabilities()
+    capabilities[0]["effect"] = "write"
+    with pytest.raises(ValidationError):
+        PluginManifest.model_validate(_manifest(capabilities=capabilities))

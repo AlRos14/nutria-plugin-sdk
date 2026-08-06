@@ -2,6 +2,10 @@
 
 SDK for building, validating, signing, and packaging Nutria plugins.
 
+Release `0.2.0` introduces the typed capability graph and manifest schema
+`2.0`. ChatBotNutralia owns reviewable drafts, revisions, and approval; a
+plugin only reads channel state and delivers the exact approved snapshot.
+
 This release also supports **declarative admin extensions**, allowing plugins
 to expose safe, host-rendered operator views inside ChatBotNutralia.
 It also defines **declarative admin flows** for safe, host-rendered operator
@@ -39,7 +43,7 @@ my-workspace-plugin/
 
 ```json
 {
-  "schema_version": "1.1",
+  "schema_version": "2.0",
   "id": "my-workspace-plugin",
   "name": "My Workspace Plugin",
   "version": "0.1.0",
@@ -48,9 +52,24 @@ my-workspace-plugin/
   "runtime_types": ["declarative_api"],
   "required_secrets": ["API_KEY"],
   "optional_secrets": ["API_REGION"],
-  "remote_endpoints": ["https://api.myworkspace.com"]
+  "remote_endpoints": ["https://api.myworkspace.com"],
+  "capabilities": [
+    {
+      "id": "workspace.search",
+      "title": "Search workspace",
+      "description": "Read matching workspace resources.",
+      "effect": "read",
+      "tool": "search_workspace",
+      "connection_id": "workspace"
+    }
+  ]
 }
 ```
+
+For customer messages, add a `reviewable_actions` contract and an
+`external_write` capability as documented in
+[reviewable-actions.md](docs/reviewable-actions.md). Do not create a plugin
+draft table or native saved-draft tool.
 
 ### 3. Validate
 

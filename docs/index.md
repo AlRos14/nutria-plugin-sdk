@@ -15,6 +15,7 @@ Developer reference for building, packaging, signing, and publishing Nutria plug
 | [security.md](security.md) | Signing, trust policies, ZIP safety rules, secrets |
 | [cli.md](cli.md) | All `nutria-plugin` CLI commands and flags |
 | [python-api.md](python-api.md) | Python API reference for programmatic usage |
+| [reviewable-actions.md](reviewable-actions.md) | Typed capabilities and host-owned draft delivery |
 
 ## What is a Nutria plugin?
 
@@ -52,6 +53,7 @@ my-plugin/
 
 ## Version
 
-This documentation describes `nutria-plugin` **v0.0.1.5b0**.
+This documentation describes `nutria-plugin` **v0.2.0** and manifest schema
+**2.0**.
 
 API and file format compatibility are not yet guaranteed between pre-release releases.

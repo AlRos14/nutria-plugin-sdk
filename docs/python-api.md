@@ -19,6 +19,13 @@ from nutria_plugin import (
     ReviewableActionField,
     ReviewableActionMode,
     PreparationToolContract,
+    CapabilityDescriptor,
+    CapabilityEffect,
+    CapabilityInputBinding,
+    CapabilityOutputBinding,
+    CapabilityRequirement,
+    ResourceBinding,
+    ResourceType,
     PluginAdminFlow,
     PluginAdminFlowKind,
     PluginAdminFlowPlacement,
@@ -63,6 +70,7 @@ print(manifest.id)             # "my-plugin"
 print(manifest.version)        # "0.1.0"
 print(manifest.runtime_types)  # [PluginRuntimeType.DECLARATIVE_API]
 print(manifest.reviewable_actions)
+print(manifest.capabilities)
 
 # Write back to file
 manifest.to_file(Path("plugin.json"))
@@ -70,6 +78,13 @@ manifest.to_file(Path("plugin.json"))
 # Serialize to dict
 data = manifest.model_dump(mode="json", exclude_none=True)
 ```
+
+`CapabilityDescriptor` is the typed contract for one authorized operation. Its
+`effect` is `read`, `prepare`, `write`, or `external_write`; `inputs`,
+`consumes`, and `produces` bind semantic arguments to graph resource types.
+External delivery capabilities set `model_callable=False` and link to a
+`ReviewableActionContract`; the host validates the complete argument mapping
+before invoking them.
 
 **Class methods:**
 
@@ -340,7 +355,7 @@ Sign a manifest dict and return the hex-encoded DER signature.
 ```python
 from nutria_plugin import sign_manifest
 
-manifest_dict = {"schema_version": "1.1", "id": "my-plugin", "version": "0.1.0", ...}
+manifest_dict = {"schema_version": "2.0", "id": "my-plugin", "version": "0.1.0", ...}
 signature_hex = sign_manifest(manifest_dict, private_key_pem)
 
 # The signature is stored in plugin.json under the "signature" key

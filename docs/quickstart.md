@@ -47,7 +47,7 @@ Open `inventory-lookup/plugin.json` and fill it in:
 
 ```json
 {
-  "schema_version": "1.1",
+  "schema_version": "2.0",
   "id": "inventory-lookup",
   "name": "Inventory Lookup",
   "version": "0.1.0",
@@ -56,7 +56,17 @@ Open `inventory-lookup/plugin.json` and fill it in:
   "runtime_types": ["declarative_api"],
   "required_secrets": ["WAREHOUSE_API_KEY"],
   "optional_secrets": ["WAREHOUSE_REGION"],
-  "remote_endpoints": ["https://api.warehouse.acme.com"]
+  "remote_endpoints": ["https://api.warehouse.acme.com"],
+  "capabilities": [
+    {
+      "id": "warehouse.stock.read",
+      "title": "Read stock",
+      "description": "Read current stock for a SKU.",
+      "effect": "read",
+      "tool": "get_stock",
+      "connection_id": "warehouse"
+    }
+  ]
 }
 ```
 

@@ -56,9 +56,10 @@ def test_pack_plugin_produces_zip(tmp_path):
     assert out.stat().st_size > 0
 
 
-def test_pack_plugin_default_output_name(tmp_path):
+def test_pack_plugin_default_output_name(tmp_path, monkeypatch):
     src = tmp_path / "myplugin"
     scaffold_plugin(src, "my-plugin")
+    monkeypatch.chdir(tmp_path)
     out = pack_plugin(src)
     assert out.name.startswith("my-plugin-")
     assert out.suffix == ".zip"

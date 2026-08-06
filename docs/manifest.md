@@ -8,7 +8,7 @@ directory as `plugin.json`.
 
 ```json
 {
-  "schema_version": "1.1",
+  "schema_version": "2.0",
   "id": "my-plugin",
   "name": "My Plugin",
   "version": "0.1.0",
@@ -32,7 +32,16 @@ directory as `plugin.json`.
   "required_secrets": ["MY_API_KEY", "MY_API_SECRET"],
   "optional_secrets": ["MY_REGION"],
   "remote_endpoints": ["https://api.myservice.com"],
-  "capabilities": ["read", "write"],
+  "capabilities": [
+    {
+      "id": "workspace.search",
+      "title": "Search workspace",
+      "description": "Read matching workspace resources.",
+      "effect": "read",
+      "tool": "search_workspace",
+      "connection_id": "workspace"
+    }
+  ],
   "tags": ["crm", "sales"],
   "admin_extensions": [
     {
@@ -64,8 +73,9 @@ directory as `plugin.json`.
 
 ### `schema_version` *(string, required)*
 
-The manifest schema is `"1.1"`. Every plugin must declare this version;
-reviewable actions and their host-owned delivery contract are defined by it.
+The manifest schema is `"2.0"`. Every plugin must declare this version.
+Capabilities and reviewable actions are typed by the SDK; schema `1.x` is not
+accepted by the production host.
 
 ---
 
@@ -265,10 +275,13 @@ Example:
 
 ---
 
-### `capabilities` *(array of strings, optional)*
+### `capabilities` *(array of objects, optional)*
 
-Free-form capability tags used for discovery and policy enforcement.
-Common values: `"read"`, `"write"`, `"notify"`, `"payments"`.
+Each entry is a `CapabilityDescriptor` with a stable `id`, title,
+description, effect (`read`, `prepare`, `write`, or `external_write`), concrete
+tool name, optional connection, typed input/resource bindings, and optional
+outputs. Host-only delivery capabilities must set `model_callable` to `false`.
+See [reviewable-actions.md](reviewable-actions.md) for the complete schema.
 
 ---
 
@@ -280,14 +293,14 @@ Examples: `["crm", "sales"]`, `["shipping", "logistics", "soap"]`
 
 ---
 
-### `reviewable_actions` *(array of objects, optional; schema 1.1)*
+### `reviewable_actions` *(array of objects, optional; schema 2.0)*
 
 Reviewable-action contracts describe delivery adapters for drafts owned by
 ChatBotNutralia. Each contract selects a channel and `new`/`reply` mode,
-declares the plugin connection and final execution tool, and maps the SDK's
-semantic fields to the tool's argument names. `required_fields` must include
-`recipient` and `body`; `editable_fields` cannot overlap the immutable fields.
-Replies may declare a read-only `prepare_tool` adapter. It must not save a
+declares the plugin connection and final execution capability, and maps the
+SDK's semantic fields to the tool's argument names. `required_fields` must
+include `recipient` and `body`; `editable_fields` cannot overlap immutable
+fields. Replies may declare a pure `prepare_capability`. It must not save a
 draft, send a message, or perform another external write. See
 [reviewable-actions.md](reviewable-actions.md) for the complete schema and
 offline/revalidation rules.

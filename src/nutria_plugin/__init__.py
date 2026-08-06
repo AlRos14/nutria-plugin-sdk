@@ -15,7 +15,17 @@ Signing:
     generate_keypair, sign_manifest, verify_manifest, SignatureStatus
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
+
+from .capabilities import (
+    CapabilityDescriptor,
+    CapabilityEffect,
+    CapabilityInputBinding,
+    CapabilityOutputBinding,
+    CapabilityRequirement,
+    ResourceBinding,
+    ResourceType,
+)
 
 
 from .manifest import (
@@ -57,6 +67,13 @@ __all__ = [
     "ReviewableActionMode",
     "ReviewableActionField",
     "PreparationToolContract",
+    "CapabilityDescriptor",
+    "CapabilityEffect",
+    "CapabilityInputBinding",
+    "CapabilityOutputBinding",
+    "CapabilityRequirement",
+    "ResourceBinding",
+    "ResourceType",
     # Bundle
     "PluginBundleError",
     "load_plugin_bundle",

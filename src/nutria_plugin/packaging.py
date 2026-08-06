@@ -25,7 +25,7 @@ class PackagingError(Exception):
 SCAFFOLD_TEMPLATE = {
     "plugin.json": lambda plugin_id, name: json.dumps(
         {
-            "schema_version": "1.1",
+            "schema_version": "2.0",
             "id": plugin_id,
             "name": name,
             "version": "0.1.0",

@@ -1,21 +1,19 @@
 # Changelog
 
+## 0.2.0
+
+- Make manifest schema `2.0` the single production schema.
+- Add typed capability/resource descriptors and host-only external writes.
+- Replace native reviewable-action tool names with capability references.
+- Validate capability references, typed bindings, and pure preparation adapters.
+- Export all capability and resource models from `nutria_plugin`.
+
 All notable changes to `nutria-plugin` are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
-
-## [0.1.0] — 2026-08-04
-
-### Added
-
-- SDK manifest schema `1.1` and typed reviewable-action contracts for host-owned
-  drafts, immutable revisions, pure preparation adapters, and exact delivery.
-- `optional_secrets` and public exports for all contract models.
-- Validation for semantic mappings, editable/immutable fields, safe tool names,
-  and preparation side effects.
 
 ## [Unreleased]
 
