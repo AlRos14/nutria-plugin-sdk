@@ -2,8 +2,8 @@
 
 SDK for building, validating, signing, and packaging Nutria plugins.
 
-Release `0.2.0` introduces the typed capability graph and manifest schema
-`2.0`. ChatBotNutralia owns reviewable drafts, revisions, and approval; a
+Release `0.2.1` adds provider-backed world graph descriptors in manifest schema
+`2.1` while continuing to accept schema `2.0`. ChatBotNutralia owns reviewable drafts, revisions, and approval; a
 plugin only reads channel state and delivers the exact approved snapshot.
 
 This release also supports **declarative admin extensions**, allowing plugins
@@ -43,7 +43,7 @@ my-workspace-plugin/
 
 ```json
 {
-  "schema_version": "2.0",
+  "schema_version": "2.1",
   "id": "my-workspace-plugin",
   "name": "My Workspace Plugin",
   "version": "0.1.0",
@@ -62,7 +62,20 @@ my-workspace-plugin/
       "tool": "search_workspace",
       "connection_id": "workspace"
     }
-  ]
+  ],
+  "world_providers": [{
+    "id": "workspace",
+    "title": "Workspace",
+    "description": "Authoritative workspace resources.",
+    "connection_id": "workspace",
+    "resource_types": [{
+      "id": "workspace.item",
+      "title": "Workspace item",
+      "description": "One stable workspace item.",
+      "identity_fields": ["id"],
+      "search_capability": "workspace.search"
+    }]
+  }]
 }
 ```
 

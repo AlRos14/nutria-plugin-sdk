@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.1
+
+- Add manifest schema `2.1` with typed world providers, custom resource types,
+  stable identity fields, safe projections, and provider capability references.
+- Keep schema `2.0` compatible and export the new provider descriptor models.
+- Scaffold new plugins with schema `2.1` while preserving the 0.3.0 roadmap.
+
 ## 0.2.0
 
 - Make manifest schema `2.0` the single production schema.

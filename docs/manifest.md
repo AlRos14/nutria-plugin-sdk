@@ -8,7 +8,7 @@ directory as `plugin.json`.
 
 ```json
 {
-  "schema_version": "2.0",
+  "schema_version": "2.1",
   "id": "my-plugin",
   "name": "My Plugin",
   "version": "0.1.0",
@@ -42,6 +42,19 @@ directory as `plugin.json`.
       "connection_id": "workspace"
     }
   ],
+  "world_providers": [{
+    "id": "workspace",
+    "title": "Workspace",
+    "description": "Authoritative workspace resources.",
+    "connection_id": "workspace",
+    "resource_types": [{
+      "id": "workspace.item",
+      "title": "Workspace item",
+      "description": "One stable workspace item.",
+      "identity_fields": ["id"],
+      "search_capability": "workspace.search"
+    }]
+  }],
   "tags": ["crm", "sales"],
   "admin_extensions": [
     {
@@ -73,7 +86,8 @@ directory as `plugin.json`.
 
 ### `schema_version` *(string, required)*
 
-The manifest schema is `"2.0"`. Every plugin must declare this version.
+The current manifest schema is `"2.1"`; schema `"2.0"` remains accepted for
+backward compatibility. Schema 2.1 adds provider-backed world graph contracts.
 Capabilities and reviewable actions are typed by the SDK; schema `1.x` is not
 accepted by the production host.
 
@@ -282,6 +296,20 @@ description, effect (`read`, `prepare`, `write`, or `external_write`), concrete
 tool name, optional connection, typed input/resource bindings, and optional
 outputs. Host-only delivery capabilities must set `model_callable` to `false`.
 See [reviewable-actions.md](reviewable-actions.md) for the complete schema.
+
+---
+
+### `world_providers` *(array of objects, optional; schema 2.1)*
+
+Each provider declares a stable `id`, title, description, optional
+`connection_id` and `health_capability`, plus one or more resource types. A
+resource type has a stable built-in or plugin-namespaced custom `id`, at least
+one `identity_fields` entry, optional `search_capability` and
+`inspect_capability`, bounded `ttl_seconds`, and named safe `projections`.
+
+Referenced capabilities must exist in the same manifest. Provider declarations
+describe navigation only: the host still enforces audience, persona assignment,
+connection state, and effect authorization before executing a tool.
 
 ---
 

@@ -31,6 +31,7 @@ Plugins define:
 - **Settings schema** — admin-configurable options shown in the Nutria UI
 - **Admin extensions** — safe, declarative operator views rendered by the Nutria host
 - **Admin flows** — safe, declarative operator workflows such as external login/pairing
+- **World providers** — resource types and capability paths injected into the host graph
 
 ## Minimal plugin structure
 
@@ -53,7 +54,7 @@ my-plugin/
 
 ## Version
 
-This documentation describes `nutria-plugin` **v0.2.0** and manifest schema
-**2.0**.
+This documentation describes `nutria-plugin` **v0.2.1** and manifest schema
+**2.1**. Schema 2.0 remains accepted for plugins that do not declare world providers.
 
 API and file format compatibility are not yet guaranteed between pre-release releases.

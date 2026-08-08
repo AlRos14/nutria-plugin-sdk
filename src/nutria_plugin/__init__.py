@@ -15,7 +15,7 @@ Signing:
     generate_keypair, sign_manifest, verify_manifest, SignatureStatus
 """
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 
 from .capabilities import (
     CapabilityDescriptor,
@@ -25,6 +25,9 @@ from .capabilities import (
     CapabilityRequirement,
     ResourceBinding,
     ResourceType,
+    ResourceTypeDescriptor,
+    WorldProjectionDescriptor,
+    WorldProviderDescriptor,
 )
 
 
@@ -74,6 +77,9 @@ __all__ = [
     "CapabilityRequirement",
     "ResourceBinding",
     "ResourceType",
+    "ResourceTypeDescriptor",
+    "WorldProjectionDescriptor",
+    "WorldProviderDescriptor",
     # Bundle
     "PluginBundleError",
     "load_plugin_bundle",

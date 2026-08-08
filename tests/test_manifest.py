@@ -64,7 +64,7 @@ def test_version_must_be_semver():
         PluginManifest.model_validate(_minimal_manifest(version="1.0"))
 
 
-def test_schema_version_must_be_2_0():
+def test_schema_version_must_be_2_x():
     with pytest.raises(ValidationError):
         PluginManifest.model_validate(_minimal_manifest(schema_version="1.1"))
 
@@ -72,6 +72,80 @@ def test_schema_version_must_be_2_0():
 def test_schema_version_1_x_is_rejected():
     with pytest.raises(ValidationError):
         PluginManifest.model_validate(_minimal_manifest(schema_version="1.0"))
+
+
+def test_schema_2_1_world_provider_accepts_custom_resource_type():
+    manifest = PluginManifest.model_validate(
+        _minimal_manifest(
+            schema_version="2.1",
+            capabilities=[
+                {
+                    "id": "workspace.search",
+                    "title": "Search workspace",
+                    "description": "Find authoritative workspace items.",
+                    "effect": "read",
+                    "tool": "search_workspace",
+                    "connection_id": "workspace",
+                    "produces": [
+                        {
+                            "field_name": "items",
+                            "resource_type": "workspace.item",
+                            "output_name": "items",
+                            "many": True,
+                        }
+                    ],
+                }
+            ],
+            world_providers=[
+                {
+                    "id": "workspace",
+                    "title": "Workspace",
+                    "description": "Authoritative workspace provider.",
+                    "connection_id": "workspace",
+                    "resource_types": [
+                        {
+                            "id": "workspace.item",
+                            "title": "Workspace item",
+                            "description": "A stable workspace item.",
+                            "identity_fields": ["id"],
+                            "search_capability": "workspace.search",
+                            "projections": [
+                                {"id": "admin", "title": "Admin", "fields": ["id"]}
+                            ],
+                        }
+                    ],
+                }
+            ],
+        )
+    )
+
+    assert manifest.schema_version == "2.1"
+    assert manifest.world_providers[0].resource_types[0].id == "workspace.item"
+
+
+def test_world_provider_rejects_unknown_capability_reference():
+    with pytest.raises(ValidationError, match="unknown capability"):
+        PluginManifest.model_validate(
+            _minimal_manifest(
+                schema_version="2.1",
+                world_providers=[
+                    {
+                        "id": "workspace",
+                        "title": "Workspace",
+                        "description": "Authoritative workspace provider.",
+                        "resource_types": [
+                            {
+                                "id": "workspace.item",
+                                "title": "Workspace item",
+                                "description": "A stable workspace item.",
+                                "identity_fields": ["id"],
+                                "search_capability": "workspace.missing",
+                            }
+                        ],
+                    }
+                ],
+            )
+        )
 
 
 def test_empty_runtime_types_rejected():

@@ -17,7 +17,7 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-from .capabilities import CapabilityDescriptor, CapabilityEffect
+from .capabilities import CapabilityDescriptor, CapabilityEffect, ResourceType, WorldProviderDescriptor
 
 _SEMVER_RE = re.compile(
     r"^(0|[1-9]\d*)\."
@@ -325,7 +325,7 @@ class PluginAdminFlow(BaseModel):
 class PluginManifest(BaseModel):
     """Manifest stored in plugin.json — the single source of truth for plugin metadata."""
 
-    schema_version: str = Field(..., pattern=r"^2\.0$")
+    schema_version: str = Field(..., pattern=r"^2\.(0|1)$")
     id: str = Field(..., pattern=r"^[a-z][a-z0-9\-]*$", max_length=64)
     name: str = Field(..., min_length=1, max_length=128)
     version: str = Field(..., min_length=5, max_length=64)
@@ -339,6 +339,7 @@ class PluginManifest(BaseModel):
     optional_secrets: List[str] = Field(default_factory=list)
     remote_endpoints: List[str] = Field(default_factory=list)
     capabilities: List[CapabilityDescriptor] = Field(default_factory=list)
+    world_providers: List[WorldProviderDescriptor] = Field(default_factory=list)
     tags: List[str] = Field(default_factory=list)
     reviewable_actions: List[ReviewableActionContract] = Field(default_factory=list)
     admin_extensions: List[PluginAdminExtension] = Field(default_factory=list)
@@ -376,6 +377,26 @@ class PluginManifest(BaseModel):
         if len(action_ids_list) != len(set(action_ids_list)):
             raise ValueError("reviewable_actions must not contain duplicate contract IDs")
         capability_map = {capability.id: capability for capability in self.capabilities}
+        provider_ids = [provider.id for provider in self.world_providers]
+        if len(provider_ids) != len(set(provider_ids)):
+            raise ValueError("world_providers must not contain duplicate IDs")
+        for provider in self.world_providers:
+            for resource in provider.resource_types:
+                resource_id = resource.id.value if isinstance(resource.id, ResourceType) else str(resource.id)
+                for field_name, capability_id in (
+                    ("search_capability", resource.search_capability),
+                    ("inspect_capability", resource.inspect_capability),
+                ):
+                    if capability_id and capability_id not in capability_map:
+                        raise ValueError(
+                            f"world provider resource {resource_id!r} {field_name} references "
+                            f"unknown capability {capability_id!r}"
+                        )
+                if provider.health_capability and provider.health_capability not in capability_map:
+                    raise ValueError(
+                        f"world provider {provider.id!r} references unknown health capability "
+                        f"{provider.health_capability!r}"
+                    )
         action_ids = set(action_ids_list)
         for action in self.reviewable_actions:
             execute = capability_map.get(action.execute_capability)
