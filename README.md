@@ -2,8 +2,9 @@
 
 SDK for building, validating, signing, and packaging Nutria plugins.
 
-Release `0.2.1` adds provider-backed world graph descriptors in manifest schema
-`2.1` while continuing to accept schema `2.0`. ChatBotNutralia owns reviewable drafts, revisions, and approval; a
+Release `0.2.2` adds capability exposure, prepared-action, idempotency, and
+completion contracts to manifest schema `2.1` while continuing to accept existing
+schema `2.0` and `2.1` manifests. ChatBotNutralia owns reviewable drafts, revisions, and approval; a
 plugin only reads channel state and delivers the exact approved snapshot.
 
 This release also supports **declarative admin extensions**, allowing plugins

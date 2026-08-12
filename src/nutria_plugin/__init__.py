@@ -15,14 +15,19 @@ Signing:
     generate_keypair, sign_manifest, verify_manifest, SignatureStatus
 """
 
-__version__ = "0.2.1"
+__version__ = "0.2.2"
 
 from .capabilities import (
     CapabilityDescriptor,
     CapabilityEffect,
+    CapabilityExposure,
     CapabilityInputBinding,
     CapabilityOutputBinding,
     CapabilityRequirement,
+    CompletionDescriptor,
+    IdempotencyDescriptor,
+    NonCallableReason,
+    PreparedActionDescriptor,
     ResourceBinding,
     ResourceType,
     ResourceTypeDescriptor,
@@ -72,9 +77,14 @@ __all__ = [
     "PreparationToolContract",
     "CapabilityDescriptor",
     "CapabilityEffect",
+    "CapabilityExposure",
     "CapabilityInputBinding",
     "CapabilityOutputBinding",
     "CapabilityRequirement",
+    "CompletionDescriptor",
+    "IdempotencyDescriptor",
+    "NonCallableReason",
+    "PreparedActionDescriptor",
     "ResourceBinding",
     "ResourceType",
     "ResourceTypeDescriptor",

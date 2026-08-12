@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.2
+
+- Add backward-compatible schema-2.1 capability exposure and safe non-callability metadata.
+- Add prepared-action, idempotency, and completion receipt contracts.
+- Require model-selectable external writes to declare all execution safety contracts.
+
 ## 0.2.1
 
 - Add manifest schema `2.1` with typed world providers, custom resource types,

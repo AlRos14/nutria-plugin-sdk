@@ -18,6 +18,69 @@ class CapabilityEffect(str, Enum):
     EXTERNAL_WRITE = "external_write"
 
 
+class CapabilityExposure(str, Enum):
+    """Who may invoke a graph-visible capability."""
+
+    MODEL = "model"
+    HOST = "host"
+    ADMIN = "admin"
+    DEPRECATED = "deprecated"
+
+
+class NonCallableReason(BaseModel):
+    """Safe explanation for a graph-visible capability that the model cannot load."""
+
+    code: str = Field(..., pattern=r"^[a-z][a-z0-9_.-]{0,127}$")
+    safe_summary: str = Field(..., min_length=1, max_length=500)
+
+    model_config = {"extra": "forbid"}
+
+
+class PreparedActionDescriptor(BaseModel):
+    """Exact-preview contract used by the host prepared-action boundary."""
+
+    preview_argument: str = Field(..., pattern=r"^[a-zA-Z][a-zA-Z0-9_-]{0,127}$")
+    preview_value: Any
+    execute_value: Any
+    adapter: str = Field(..., pattern=r"^[a-z][a-z0-9_.-]{0,127}$")
+    ttl_seconds: int = Field(..., ge=60, le=86_400)
+    merge_previews: bool
+    guard_mode: str = Field(..., pattern=r"^(always|pending_only)$")
+    argument_default: Any
+
+    model_config = {"extra": "forbid"}
+
+
+class IdempotencyDescriptor(BaseModel):
+    """Execution idempotency contract for a capability."""
+
+    argument_name: str = Field(..., pattern=r"^[a-zA-Z][a-zA-Z0-9_-]{0,127}$")
+    required_for_execution: bool
+
+    model_config = {"extra": "forbid"}
+
+
+class CompletionDescriptor(BaseModel):
+    """Authoritative receipt kinds required before a capability is complete."""
+
+    receipts: list[str] = Field(..., min_length=1)
+
+    model_config = {"extra": "forbid"}
+
+    @field_validator("receipts")
+    @classmethod
+    def _validate_receipts(cls, value: list[str]) -> list[str]:
+        cleaned = list(dict.fromkeys(item.strip() for item in value if item.strip()))
+        if not cleaned:
+            raise ValueError("completion receipts must not be empty")
+        for receipt in cleaned:
+            import re
+
+            if not re.fullmatch(r"^[a-z][a-z0-9_.-]{0,127}$", receipt):
+                raise ValueError("completion receipts must be stable lowercase identifiers")
+        return cleaned
+
+
 class ResourceType(str, Enum):
     TENANT = "tenant"
     CLIENT = "client"
@@ -213,6 +276,11 @@ class CapabilityDescriptor(BaseModel):
     inputs: list[CapabilityInputBinding] = Field(default_factory=list)
     requirements: CapabilityRequirement = Field(default_factory=CapabilityRequirement)
     model_callable: bool = True
+    exposure: CapabilityExposure | None = None
+    non_callable_reason: NonCallableReason | None = None
+    prepared_action: PreparedActionDescriptor | None = None
+    idempotency: IdempotencyDescriptor | None = None
+    completion: CompletionDescriptor | None = None
     reviewable_action_id: str | None = Field(
         default=None, pattern=r"^[a-z][a-z0-9-]{0,63}$"
     )
@@ -221,6 +289,24 @@ class CapabilityDescriptor(BaseModel):
 
     @model_validator(mode="after")
     def _validate_contract(self) -> "CapabilityDescriptor":
+        if self.exposure is None:
+            self.exposure = (
+                CapabilityExposure.MODEL if self.model_callable else CapabilityExposure.HOST
+            )
+            if not self.model_callable and self.non_callable_reason is None:
+                self.non_callable_reason = NonCallableReason(
+                    code="legacy_host_only",
+                    safe_summary="This capability is available only through the trusted host.",
+                )
+        if self.exposure == CapabilityExposure.MODEL and not self.model_callable:
+            raise ValueError("exposure=model requires model_callable=true")
+        if self.exposure != CapabilityExposure.MODEL:
+            if self.model_callable:
+                raise ValueError("non-model exposure requires model_callable=false")
+            if self.non_callable_reason is None:
+                raise ValueError("non-model exposure requires non_callable_reason")
+        elif self.non_callable_reason is not None:
+            raise ValueError("model exposure must not declare non_callable_reason")
         if self.connection_id and self.requirements.connection_id not in (None, self.connection_id):
             raise ValueError("capability connection_id conflicts with its requirement")
         if (
@@ -235,6 +321,25 @@ class CapabilityDescriptor(BaseModel):
         output_names = [item.output_name for item in self.produces]
         if len(output_names) != len(set(output_names)):
             raise ValueError("capability outputs must not repeat output names")
+        if self.effect == CapabilityEffect.EXTERNAL_WRITE and self.model_callable:
+            missing = [
+                name
+                for name, value in (
+                    ("prepared_action", self.prepared_action),
+                    ("idempotency", self.idempotency),
+                    ("completion", self.completion),
+                )
+                if value is None
+            ]
+            if missing:
+                raise ValueError(
+                    "model-selectable external writes require " + ", ".join(missing)
+                )
+            assert self.idempotency is not None
+            if not self.idempotency.required_for_execution:
+                raise ValueError(
+                    "model-selectable external writes require execution idempotency"
+                )
         return self
 
 
