@@ -18,13 +18,46 @@ from nutria_plugin.manifest import (
 
 def _minimal_manifest(**overrides) -> dict:
     base = {
-        "schema_version": "2.0",
+        "schema_version": "2.2",
         "id": "test-plugin",
         "name": "Test Plugin",
         "version": "1.0.0",
         "description": "A test plugin",
         "author": "Tester",
         "runtime_types": ["declarative_api"],
+        "capabilities": [
+            {
+                "id": "test.health.read",
+                "title": "Read health",
+                "description": "Read current plugin health.",
+                "effect": "read",
+                "tool": "get_health",
+                "connection_id": "test",
+                "requirements": {
+                    "authority": "read",
+                    "audience": ["private_internal", "team_internal"],
+                    "task_context": "optional",
+                },
+                "exposure": "model",
+            }
+        ],
+        "world_providers": [
+            {
+                "id": "test",
+                "title": "Test provider",
+                "description": "Authoritative test resources.",
+                "connection_id": "test",
+                "health_capability": "test.health.read",
+                "resource_types": [
+                    {
+                        "id": "test.resource",
+                        "title": "Test resource",
+                        "description": "One stable test resource.",
+                        "identity_fields": ["id"],
+                    }
+                ],
+            }
+        ],
     }
     base.update(overrides)
     return base
@@ -64,20 +97,21 @@ def test_version_must_be_semver():
         PluginManifest.model_validate(_minimal_manifest(version="1.0"))
 
 
-def test_schema_version_must_be_2_x():
+def test_schema_version_must_be_2_2():
     with pytest.raises(ValidationError):
         PluginManifest.model_validate(_minimal_manifest(schema_version="1.1"))
 
 
-def test_schema_version_1_x_is_rejected():
+@pytest.mark.parametrize("version", ["1.0", "2.0", "2.1", "2.3"])
+def test_other_schema_versions_are_rejected(version):
     with pytest.raises(ValidationError):
-        PluginManifest.model_validate(_minimal_manifest(schema_version="1.0"))
+        PluginManifest.model_validate(_minimal_manifest(schema_version=version))
 
 
-def test_schema_2_1_world_provider_accepts_custom_resource_type():
+def test_schema_2_2_world_provider_accepts_custom_resource_type():
     manifest = PluginManifest.model_validate(
         _minimal_manifest(
-            schema_version="2.1",
+            schema_version="2.2",
             capabilities=[
                 {
                     "id": "workspace.search",
@@ -86,6 +120,12 @@ def test_schema_2_1_world_provider_accepts_custom_resource_type():
                     "effect": "read",
                     "tool": "search_workspace",
                     "connection_id": "workspace",
+                    "requirements": {
+                        "authority": "read",
+                        "audience": ["private_internal", "team_internal"],
+                        "task_context": "optional",
+                    },
+                    "exposure": "model",
                     "produces": [
                         {
                             "field_name": "items",
@@ -119,7 +159,7 @@ def test_schema_2_1_world_provider_accepts_custom_resource_type():
         )
     )
 
-    assert manifest.schema_version == "2.1"
+    assert manifest.schema_version == "2.2"
     assert manifest.world_providers[0].resource_types[0].id == "workspace.item"
 
 
@@ -127,12 +167,13 @@ def test_world_provider_rejects_unknown_capability_reference():
     with pytest.raises(ValidationError, match="unknown capability"):
         PluginManifest.model_validate(
             _minimal_manifest(
-                schema_version="2.1",
+                schema_version="2.2",
                 world_providers=[
                     {
                         "id": "workspace",
                         "title": "Workspace",
                         "description": "Authoritative workspace provider.",
+                        "connection_id": "test",
                         "resource_types": [
                             {
                                 "id": "workspace.item",

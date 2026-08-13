@@ -25,7 +25,7 @@ class PackagingError(Exception):
 SCAFFOLD_TEMPLATE = {
     "plugin.json": lambda plugin_id, name: json.dumps(
         {
-            "schema_version": "2.1",
+            "schema_version": "2.2",
             "id": plugin_id,
             "name": name,
             "version": "0.1.0",
@@ -35,7 +35,39 @@ SCAFFOLD_TEMPLATE = {
             "default_scope": "store",
             "required_secrets": [],
             "remote_endpoints": [],
-            "capabilities": [],
+            "capabilities": [
+                {
+                    "id": f"{plugin_id}.health.read",
+                    "title": "Read plugin health",
+                    "description": "Read the current plugin connection health.",
+                    "effect": "read",
+                    "tool": "get_health",
+                    "connection_id": plugin_id,
+                    "requirements": {
+                        "authority": "read",
+                        "audience": ["private_internal", "team_internal"],
+                        "task_context": "optional",
+                    },
+                    "exposure": "model",
+                }
+            ],
+            "world_providers": [
+                {
+                    "id": plugin_id,
+                    "title": name,
+                    "description": f"Authoritative {name} resources.",
+                    "connection_id": plugin_id,
+                    "health_capability": f"{plugin_id}.health.read",
+                    "resource_types": [
+                        {
+                            "id": f"{plugin_id}.resource",
+                            "title": f"{name} resource",
+                            "description": f"One stable resource exposed by {name}.",
+                            "identity_fields": ["id"],
+                        }
+                    ],
+                }
+            ],
             "tags": [],
         },
         indent=2,

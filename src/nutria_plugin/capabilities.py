@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -24,7 +24,6 @@ class CapabilityExposure(str, Enum):
     MODEL = "model"
     HOST = "host"
     ADMIN = "admin"
-    DEPRECATED = "deprecated"
 
 
 class NonCallableReason(BaseModel):
@@ -123,9 +122,9 @@ class ResourceType(str, Enum):
 class CapabilityRequirement(BaseModel):
     """Runtime requirement evaluated by the host before exposing a capability."""
 
-    authority: str | None = Field(default=None, pattern=r"^[a-z][a-z0-9_.-]{0,127}$")
-    connection_id: str | None = Field(default=None, pattern=r"^[a-zA-Z][a-zA-Z0-9_-]{0,127}$")
-    audience: list[str] = Field(default_factory=list)
+    authority: Literal["read", "write_internal", "write_external"]
+    audience: list[str] = Field(..., min_length=1)
+    task_context: Literal["optional", "required"]
 
     model_config = {"extra": "forbid"}
 
@@ -274,9 +273,8 @@ class CapabilityDescriptor(BaseModel):
     consumes: list[ResourceBinding] = Field(default_factory=list)
     produces: list[CapabilityOutputBinding] = Field(default_factory=list)
     inputs: list[CapabilityInputBinding] = Field(default_factory=list)
-    requirements: CapabilityRequirement = Field(default_factory=CapabilityRequirement)
-    model_callable: bool = True
-    exposure: CapabilityExposure | None = None
+    requirements: CapabilityRequirement
+    exposure: CapabilityExposure
     non_callable_reason: NonCallableReason | None = None
     prepared_action: PreparedActionDescriptor | None = None
     idempotency: IdempotencyDescriptor | None = None
@@ -289,30 +287,14 @@ class CapabilityDescriptor(BaseModel):
 
     @model_validator(mode="after")
     def _validate_contract(self) -> "CapabilityDescriptor":
-        if self.exposure is None:
-            self.exposure = (
-                CapabilityExposure.MODEL if self.model_callable else CapabilityExposure.HOST
-            )
-            if not self.model_callable and self.non_callable_reason is None:
-                self.non_callable_reason = NonCallableReason(
-                    code="legacy_host_only",
-                    safe_summary="This capability is available only through the trusted host.",
-                )
-        if self.exposure == CapabilityExposure.MODEL and not self.model_callable:
-            raise ValueError("exposure=model requires model_callable=true")
-        if self.exposure != CapabilityExposure.MODEL:
-            if self.model_callable:
-                raise ValueError("non-model exposure requires model_callable=false")
-            if self.non_callable_reason is None:
-                raise ValueError("non-model exposure requires non_callable_reason")
-        elif self.non_callable_reason is not None:
+        if self.exposure == CapabilityExposure.MODEL and self.non_callable_reason is not None:
             raise ValueError("model exposure must not declare non_callable_reason")
-        if self.connection_id and self.requirements.connection_id not in (None, self.connection_id):
-            raise ValueError("capability connection_id conflicts with its requirement")
+        if self.exposure != CapabilityExposure.MODEL and self.non_callable_reason is None:
+            raise ValueError("host/admin exposure requires non_callable_reason")
         if (
             self.reviewable_action_id
             and self.effect == CapabilityEffect.EXTERNAL_WRITE
-            and self.model_callable
+            and self.exposure == CapabilityExposure.MODEL
         ):
             raise ValueError("reviewable delivery capabilities must be host-only")
         input_names = [item.semantic_field for item in self.inputs]
@@ -321,7 +303,20 @@ class CapabilityDescriptor(BaseModel):
         output_names = [item.output_name for item in self.produces]
         if len(output_names) != len(set(output_names)):
             raise ValueError("capability outputs must not repeat output names")
-        if self.effect == CapabilityEffect.EXTERNAL_WRITE and self.model_callable:
+        task_owned_types = {
+            ResourceType.TASK.value,
+            ResourceType.ARTIFACT.value,
+            ResourceType.PREPARED_ACTION.value,
+        }
+        bound_types = {
+            item.resource_type.value
+            if isinstance(item.resource_type, ResourceType)
+            else str(item.resource_type)
+            for item in (*self.consumes, *self.produces)
+        }
+        if bound_types & task_owned_types and self.requirements.task_context != "required":
+            raise ValueError("task-owned resources require task_context=required")
+        if self.effect == CapabilityEffect.EXTERNAL_WRITE and self.exposure == CapabilityExposure.MODEL:
             missing = [
                 name
                 for name, value in (

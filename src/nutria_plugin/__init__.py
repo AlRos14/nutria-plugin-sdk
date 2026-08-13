@@ -3,7 +3,7 @@
 Public API
 ----------
 Models:
-    PluginManifest, PluginPaths, PluginCompatibility, PluginScope, PluginRuntimeType
+    PluginManifest, PluginPaths, PluginScope, PluginRuntimeType
 
 Bundle operations:
     load_plugin_bundle, extract_plugin_bundle, validate_zip
@@ -15,7 +15,7 @@ Signing:
     generate_keypair, sign_manifest, verify_manifest, SignatureStatus
 """
 
-__version__ = "0.2.2"
+__version__ = "0.2.3"
 
 from .capabilities import (
     CapabilityDescriptor,
@@ -43,7 +43,6 @@ from .manifest import (
     PluginAdminFlow,
     PluginAdminFlowKind,
     PluginAdminFlowPlacement,
-    PluginCompatibility,
     PluginManifest,
     PluginPaths,
     PreparationToolContract,
@@ -62,7 +61,6 @@ __all__ = [
     # Manifest
     "PluginManifest",
     "PluginPaths",
-    "PluginCompatibility",
     "PluginScope",
     "PluginRuntimeType",
     "PluginAdminExtension",

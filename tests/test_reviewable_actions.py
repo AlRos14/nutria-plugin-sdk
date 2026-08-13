@@ -42,7 +42,12 @@ def _capabilities():
             "effect": "prepare",
             "tool": "prepare_email_reply",
             "connection_id": "email",
-            "model_callable": True,
+            "requirements": {
+                "authority": "read",
+                "audience": ["private_internal", "team_internal"],
+                "task_context": "required",
+            },
+            "exposure": "model",
         },
         {
             "id": "email.send.reply",
@@ -51,7 +56,47 @@ def _capabilities():
             "effect": "external_write",
             "tool": "send_resolved_email_reply",
             "connection_id": "email",
-            "model_callable": False,
+            "consumes": [
+                {"name": "action", "resource_type": "prepared_action"}
+            ],
+            "inputs": [
+                {"semantic_field": "recipient", "argument_name": "recipient"},
+                {"semantic_field": "body", "argument_name": "body"},
+                {
+                    "semantic_field": "subject",
+                    "argument_name": "subject",
+                    "required": False,
+                },
+                {
+                    "semantic_field": "reply_target",
+                    "argument_name": "reply_to_message_id",
+                    "required": False,
+                },
+                {
+                    "semantic_field": "source_ref",
+                    "argument_name": "source_email_id",
+                    "required": False,
+                },
+                {
+                    "semantic_field": "source_fingerprint",
+                    "argument_name": "source_fingerprint",
+                    "required": False,
+                },
+                {
+                    "semantic_field": "idempotency_key",
+                    "argument_name": "idempotency_key",
+                },
+            ],
+            "requirements": {
+                "authority": "write_external",
+                "audience": ["private_internal", "team_internal"],
+                "task_context": "required",
+            },
+            "exposure": "host",
+            "non_callable_reason": {
+                "code": "approval_required",
+                "safe_summary": "The trusted host executes the reviewed reply.",
+            },
             "reviewable_action_id": "email-reply",
         },
     ]
@@ -59,7 +104,7 @@ def _capabilities():
 
 def _manifest(**overrides):
     data = {
-        "schema_version": "2.0",
+        "schema_version": "2.2",
         "id": "email-plugin",
         "name": "Email",
         "version": "1.0.0",
@@ -67,6 +112,22 @@ def _manifest(**overrides):
         "author": "Nutria",
         "runtime_types": ["remote_mcp"],
         "capabilities": _capabilities(),
+        "world_providers": [
+            {
+                "id": "email",
+                "title": "Email",
+                "description": "Authoritative mailbox resources.",
+                "connection_id": "email",
+                "resource_types": [
+                    {
+                        "id": "email_message",
+                        "title": "Email message",
+                        "description": "One stable email message.",
+                        "identity_fields": ["id"],
+                    }
+                ],
+            }
+        ],
         "reviewable_actions": [_contract()],
     }
     data.update(overrides)
@@ -132,7 +193,8 @@ def test_unknown_capability_reference_rejected():
 
 def test_reviewable_external_write_must_be_host_only():
     capabilities = _capabilities()
-    capabilities[1]["model_callable"] = True
+    capabilities[1]["exposure"] = "model"
+    capabilities[1].pop("non_callable_reason")
     with pytest.raises(ValidationError):
         PluginManifest.model_validate(_manifest(capabilities=capabilities))
 

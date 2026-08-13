@@ -1,4 +1,4 @@
-"""Capability exposure and effect-safety contracts introduced in SDK 0.2.2."""
+"""Strict world-graph capability contracts introduced in SDK 0.2.3."""
 
 from __future__ import annotations
 
@@ -15,6 +15,12 @@ def _capability(**overrides):
         "description": "Create one shipment after an exact preview.",
         "effect": "external_write",
         "tool": "create_shipment",
+        "requirements": {
+            "authority": "write_external",
+            "audience": ["private_internal", "team_internal"],
+            "task_context": "optional",
+        },
+        "exposure": "model",
     }
     payload.update(overrides)
     return payload
@@ -40,35 +46,33 @@ def _safety_contracts():
     }
 
 
-def test_legacy_model_capability_gets_explicit_model_exposure():
-    descriptor = CapabilityDescriptor.model_validate(
-        _capability(effect="read", model_callable=True)
-    )
+def test_model_capability_requires_explicit_model_exposure():
+    descriptor = CapabilityDescriptor.model_validate(_capability(effect="read"))
     assert descriptor.exposure == CapabilityExposure.MODEL
     assert descriptor.non_callable_reason is None
 
 
-def test_legacy_non_callable_capability_gets_safe_host_projection():
-    descriptor = CapabilityDescriptor.model_validate(
-        _capability(model_callable=False)
-    )
-    assert descriptor.exposure == CapabilityExposure.HOST
-    assert descriptor.non_callable_reason.code == "legacy_host_only"
+def test_missing_exposure_is_rejected():
+    payload = _capability(effect="read")
+    payload.pop("exposure")
+    with pytest.raises(ValidationError, match="exposure"):
+        CapabilityDescriptor.model_validate(payload)
 
 
-@pytest.mark.parametrize("exposure", ["host", "admin", "deprecated"])
+@pytest.mark.parametrize("exposure", ["host", "admin"])
 def test_non_model_exposure_requires_reason(exposure):
     with pytest.raises(ValidationError, match="non_callable_reason"):
-        CapabilityDescriptor.model_validate(
-            _capability(exposure=exposure, model_callable=False)
-        )
+        CapabilityDescriptor.model_validate(_capability(exposure=exposure))
 
 
-def test_model_exposure_requires_model_callable():
+def test_removed_model_callable_field_is_rejected():
     with pytest.raises(ValidationError, match="model_callable"):
-        CapabilityDescriptor.model_validate(
-            _capability(exposure="model", model_callable=False)
-        )
+        CapabilityDescriptor.model_validate(_capability(model_callable=True))
+
+
+def test_deprecated_exposure_is_rejected():
+    with pytest.raises(ValidationError, match="exposure"):
+        CapabilityDescriptor.model_validate(_capability(exposure="deprecated"))
 
 
 def test_model_selectable_external_write_requires_all_safety_contracts():
@@ -87,7 +91,11 @@ def test_host_external_write_remains_valid_without_prepared_contract():
     descriptor = CapabilityDescriptor.model_validate(
         _capability(
             exposure="host",
-            model_callable=False,
+            requirements={
+                "authority": "write_external",
+                "audience": ["private_internal", "team_internal"],
+                "task_context": "required",
+            },
             non_callable_reason={
                 "code": "prepared_execution_only",
                 "safe_summary": "Execution is restricted to the prepared-action host.",
@@ -95,3 +103,13 @@ def test_host_external_write_remains_valid_without_prepared_contract():
         )
     )
     assert descriptor.exposure == CapabilityExposure.HOST
+
+
+def test_task_owned_resources_require_task_context():
+    with pytest.raises(ValidationError, match="task_context=required"):
+        CapabilityDescriptor.model_validate(
+            _capability(
+                effect="read",
+                consumes=[{"name": "action", "resource_type": "prepared_action"}],
+            )
+        )

@@ -28,13 +28,45 @@ def _make_zip(files: dict[str, str]) -> bytes:
 
 VALID_MANIFEST = json.dumps(
     {
-        "schema_version": "2.0",
+        "schema_version": "2.2",
         "id": "test-plugin",
         "name": "Test",
         "version": "1.0.0",
         "description": "d",
         "author": "a",
         "runtime_types": ["declarative_api"],
+        "capabilities": [
+            {
+                "id": "test.health.read",
+                "title": "Read health",
+                "description": "Read plugin health.",
+                "effect": "read",
+                "tool": "get_health",
+                "connection_id": "test",
+                "requirements": {
+                    "authority": "read",
+                    "audience": ["private_internal"],
+                    "task_context": "optional"
+                },
+                "exposure": "model"
+            }
+        ],
+        "world_providers": [
+            {
+                "id": "test",
+                "title": "Test",
+                "description": "Test resources.",
+                "connection_id": "test",
+                "resource_types": [
+                    {
+                        "id": "test.resource",
+                        "title": "Test resource",
+                        "description": "One test resource.",
+                        "identity_fields": ["id"]
+                    }
+                ]
+            }
+        ]
     }
 )
 

@@ -13,11 +13,17 @@ import hashlib
 import re
 from enum import Enum
 from pathlib import Path, PurePosixPath
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-from .capabilities import CapabilityDescriptor, CapabilityEffect, ResourceType, WorldProviderDescriptor
+from .capabilities import (
+    CapabilityDescriptor,
+    CapabilityEffect,
+    CapabilityExposure,
+    ResourceType,
+    WorldProviderDescriptor,
+)
 
 _SEMVER_RE = re.compile(
     r"^(0|[1-9]\d*)\."
@@ -217,22 +223,6 @@ class ReviewableActionContract(BaseModel):
         raw = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
         return hashlib.sha256(raw).hexdigest()
 
-class PluginCompatibility(BaseModel):
-    """Compatibility gates evaluated during install."""
-
-    min_nutria_version: Optional[str] = None
-    max_nutria_version: Optional[str] = None
-
-    @field_validator("min_nutria_version", "max_nutria_version")
-    @classmethod
-    def _validate_semver(cls, value: Optional[str]) -> Optional[str]:
-        if value is None:
-            return value
-        if not _SEMVER_RE.match(value):
-            raise ValueError("compatibility versions must use semantic versioning")
-        return value
-
-
 class PluginPaths(BaseModel):
     """Relative paths used inside the plugin ZIP."""
 
@@ -325,7 +315,7 @@ class PluginAdminFlow(BaseModel):
 class PluginManifest(BaseModel):
     """Manifest stored in plugin.json — the single source of truth for plugin metadata."""
 
-    schema_version: str = Field(..., pattern=r"^2\.(0|1)$")
+    schema_version: Literal["2.2"]
     id: str = Field(..., pattern=r"^[a-z][a-z0-9\-]*$", max_length=64)
     name: str = Field(..., min_length=1, max_length=128)
     version: str = Field(..., min_length=5, max_length=64)
@@ -333,13 +323,12 @@ class PluginManifest(BaseModel):
     author: str = Field(..., min_length=1, max_length=128)
     runtime_types: List[PluginRuntimeType] = Field(default_factory=list, min_length=1)
     default_scope: PluginScope = PluginScope.STORE
-    compatibility: PluginCompatibility = Field(default_factory=PluginCompatibility)
     paths: PluginPaths = Field(default_factory=PluginPaths)
     required_secrets: List[str] = Field(default_factory=list)
     optional_secrets: List[str] = Field(default_factory=list)
     remote_endpoints: List[str] = Field(default_factory=list)
-    capabilities: List[CapabilityDescriptor] = Field(default_factory=list)
-    world_providers: List[WorldProviderDescriptor] = Field(default_factory=list)
+    capabilities: List[CapabilityDescriptor] = Field(..., min_length=1)
+    world_providers: List[WorldProviderDescriptor] = Field(..., min_length=1)
     tags: List[str] = Field(default_factory=list)
     reviewable_actions: List[ReviewableActionContract] = Field(default_factory=list)
     admin_extensions: List[PluginAdminExtension] = Field(default_factory=list)
@@ -380,6 +369,20 @@ class PluginManifest(BaseModel):
         provider_ids = [provider.id for provider in self.world_providers]
         if len(provider_ids) != len(set(provider_ids)):
             raise ValueError("world_providers must not contain duplicate IDs")
+        provider_connections = {
+            provider.connection_id for provider in self.world_providers if provider.connection_id
+        }
+        missing_provider_connections = {
+            capability.connection_id
+            for capability in self.capabilities
+            if capability.connection_id
+            and capability.connection_id not in provider_connections
+        }
+        if missing_provider_connections:
+            raise ValueError(
+                "capability connections require a matching world provider: "
+                + ", ".join(sorted(missing_provider_connections))
+            )
         for provider in self.world_providers:
             for resource in provider.resource_types:
                 resource_id = resource.id.value if isinstance(resource.id, ResourceType) else str(resource.id)
@@ -407,7 +410,7 @@ class PluginManifest(BaseModel):
                 )
             if execute.effect != CapabilityEffect.EXTERNAL_WRITE:
                 raise ValueError("reviewable execution capability must use external_write")
-            if execute.model_callable:
+            if execute.exposure != CapabilityExposure.HOST:
                 raise ValueError("reviewable execution capability must be host-only")
             if execute.connection_id != action.connection_id:
                 raise ValueError("reviewable execution capability connection does not match action")
