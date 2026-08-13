@@ -1,14 +1,14 @@
 # plugin.json manifest reference
 
 `plugin.json` is the single source of truth for plugin identity, runtime,
-capability authority, and provider topology. SDK 0.2.3 accepts exactly schema
-`2.2`; older schemas and unknown fields fail validation.
+capability authority, and provider topology. SDK 0.3.0 accepts exactly schema
+`3.0`; older schemas and unknown fields fail validation.
 
 ## Required top-level fields
 
 | Field | Contract |
 |---|---|
-| `schema_version` | Literal `"2.2"` |
+| `schema_version` | Literal `"3.0"` |
 | `id` | Lowercase plugin slug |
 | `name`, `description`, `author` | Non-empty display metadata |
 | `version` | Semantic version |
@@ -19,7 +19,7 @@ capability authority, and provider topology. SDK 0.2.3 accepts exactly schema
 Optional fields include `default_scope`, `paths`, `required_secrets`,
 `optional_secrets`, `remote_endpoints`, `tags`, `reviewable_actions`,
 `admin_extensions`, `admin_flows`, `mcp_server_entry`, `homepage`, `license`,
-and `signature`. A `compatibility` field is not part of schema 2.2.
+and `signature`. A `compatibility` field is not part of schema 3.0.
 
 ## Capability descriptor
 

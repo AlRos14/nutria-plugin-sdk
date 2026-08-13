@@ -262,7 +262,7 @@ wheels = [
 
 [[package]]
 name = "nutria-plugin"
-version = "0.2.2"
+version = "0.3.0"
 source = { editable = "." }
 dependencies = [
     { name = "cryptography" },
@@ -281,6 +281,7 @@ dev = [
 dev = [
     { name = "pytest" },
     { name = "pytest-asyncio" },
+    { name = "ruff" },
 ]
 
 [package.metadata]
@@ -298,6 +299,7 @@ provides-extras = ["dev"]
 dev = [
     { name = "pytest", specifier = ">=9.0.2" },
     { name = "pytest-asyncio", specifier = ">=1.3.0" },
+    { name = "ruff", specifier = ">=0.8" },
 ]
 
 [[package]]

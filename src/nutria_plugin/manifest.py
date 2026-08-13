@@ -315,7 +315,7 @@ class PluginAdminFlow(BaseModel):
 class PluginManifest(BaseModel):
     """Manifest stored in plugin.json — the single source of truth for plugin metadata."""
 
-    schema_version: Literal["2.2"]
+    schema_version: Literal["3.0"]
     id: str = Field(..., pattern=r"^[a-z][a-z0-9\-]*$", max_length=64)
     name: str = Field(..., min_length=1, max_length=128)
     version: str = Field(..., min_length=5, max_length=64)
@@ -383,6 +383,30 @@ class PluginManifest(BaseModel):
                 "capability connections require a matching world provider: "
                 + ", ".join(sorted(missing_provider_connections))
             )
+        provider_resource_types = {
+            provider.connection_id: {
+                resource.id.value if isinstance(resource.id, ResourceType) else str(resource.id)
+                for resource in provider.resource_types
+            }
+            for provider in self.world_providers
+            if provider.connection_id
+        }
+        for capability in self.capabilities:
+            if not capability.connection_id:
+                continue
+            available_types = provider_resource_types.get(capability.connection_id, set())
+            undeclared = {
+                output.resource_type.value
+                if isinstance(output.resource_type, ResourceType)
+                else str(output.resource_type)
+                for output in capability.produces
+            } - available_types
+            if undeclared:
+                raise ValueError(
+                    f"capability {capability.id!r} produces resource types not declared by "
+                    f"provider {capability.connection_id!r}: "
+                    + ", ".join(sorted(undeclared))
+                )
         for provider in self.world_providers:
             for resource in provider.resource_types:
                 resource_id = resource.id.value if isinstance(resource.id, ResourceType) else str(resource.id)

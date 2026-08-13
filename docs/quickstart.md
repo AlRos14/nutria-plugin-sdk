@@ -1,9 +1,9 @@
-# Quickstart: a schema 2.2 plugin
+# Quickstart: a schema 3.0 plugin
 
 ## Install and scaffold
 
 ```bash
-uv add nutria-plugin==0.2.3
+uv add nutria-plugin==0.3.0
 nutria-plugin new inventory-lookup --name "Inventory Lookup"
 ```
 
@@ -11,7 +11,7 @@ nutria-plugin new inventory-lookup --name "Inventory Lookup"
 
 ```json
 {
-  "schema_version": "2.2",
+  "schema_version": "3.0",
   "id": "inventory-lookup",
   "name": "Inventory Lookup",
   "version": "0.1.0",
@@ -32,7 +32,12 @@ nutria-plugin new inventory-lookup --name "Inventory Lookup"
       "audience": ["team_internal", "public_customer"],
       "task_context": "optional"
     },
-    "exposure": "model"
+    "exposure": "model",
+    "produces": [{
+      "result_path": ".stock",
+      "resource_type": "warehouse.stock",
+      "output_name": "stock"
+    }]
   }],
   "world_providers": [{
     "id": "warehouse",
