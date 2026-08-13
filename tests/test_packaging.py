@@ -56,6 +56,17 @@ def test_pack_plugin_produces_zip(tmp_path):
     assert out.stat().st_size > 0
 
 
+def test_pack_plugin_creates_output_directory(tmp_path):
+    src = tmp_path / "myplugin"
+    scaffold_plugin(src, "my-plugin", "My Plugin")
+    out = tmp_path / "dist" / "nested" / "output.zip"
+
+    result = pack_plugin(src, out)
+
+    assert result == out
+    assert out.is_file()
+
+
 def test_pack_plugin_default_output_name(tmp_path, monkeypatch):
     src = tmp_path / "myplugin"
     scaffold_plugin(src, "my-plugin")

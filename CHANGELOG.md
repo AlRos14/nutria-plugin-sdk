@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.1
+
+- Create missing parent directories for explicit plugin package output paths.
+
 ## 0.3.0
 
 - Replace adapter-specific prepared actions with one portable exact-preview protocol.

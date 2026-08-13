@@ -15,7 +15,7 @@ Signing:
     generate_keypair, sign_manifest, verify_manifest, SignatureStatus
 """
 
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 
 from .capabilities import (
     CapabilityDescriptor,
