@@ -1,6 +1,6 @@
 # Reviewable actions and external writes
 
-SDK 0.3.0 schema 3.0 defines one reviewable-action architecture:
+SDK 0.3.1 schema 3.0 defines one reviewable-action architecture:
 
 ```text
 ChatBotNutralia -> task context, encrypted draft, revision, approval, idempotency, receipts

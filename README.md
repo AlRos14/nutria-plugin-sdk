@@ -2,7 +2,7 @@
 
 SDK for building, validating, signing, and packaging Nutria plugins.
 
-Release `0.3.0` is intentionally breaking. It accepts only manifest schema
+Release `0.3.1` uses the intentionally breaking schema introduced in 0.3.0. It accepts only manifest schema
 `3.0`, requires typed capabilities and world providers, and makes authority,
 audience, task-context requirements, and exposure explicit. There is no runtime
 migration for schema 2.0/2.1 manifests and no compatibility/model-callability
@@ -15,7 +15,7 @@ and exact delivery of an approved snapshot.
 ## Install
 
 ```bash
-uv add nutria-plugin==0.3.0
+uv add nutria-plugin==0.3.1
 ```
 
 ## Scaffold and validate

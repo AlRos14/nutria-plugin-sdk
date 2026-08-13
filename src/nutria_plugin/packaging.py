@@ -283,6 +283,7 @@ def pack_plugin(
 
     if output_path is None:
         output_path = Path(f"{manifest.id}-{manifest.version}.zip")
+    output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_bytes(data)
     return output_path
 
