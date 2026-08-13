@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "nutria-plugin"
-version = "0.2.2"
+version = "0.2.3"
 description = "SDK for building, validating, signing, and packaging Nutria plugins"
 readme = "README.md"
 license = {text = "MIT"}

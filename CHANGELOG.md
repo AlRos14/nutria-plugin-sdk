@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.2.3
+
+- Make manifest schema 2.2 the only accepted plugin contract.
+- Require every manifest to declare typed capabilities and world providers.
+- Require explicit capability authority, audience, task-context, and exposure.
+- Replace model-callability and compatibility metadata with strict exposure and
+  safe non-callability reasons.
+- Require task context for task-owned resources and matching providers for all
+  connection-backed capabilities.
+- Tighten reviewable external writes, immutable envelope mappings,
+  idempotency, and completion receipt validation.
+
 ## 0.2.2
 
 - Add backward-compatible schema-2.1 capability exposure and safe non-callability metadata.

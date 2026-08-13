@@ -1,448 +1,84 @@
-# plugin.json — Manifest Reference
-
-The manifest is the single source of truth for plugin identity, runtime
-requirements, and security policy. It must be at the root of the plugin
-directory as `plugin.json`.
-
-## Complete example
-
-```json
-{
-  "schema_version": "2.1",
-  "id": "my-plugin",
-  "name": "My Plugin",
-  "version": "0.1.0",
-  "description": "Short description of what this plugin does (max 1024 chars).",
-  "author": "Acme Corp <dev@acme.com>",
-  "runtime_types": ["declarative_api"],
-  "default_scope": "store",
-  "compatibility": {
-    "min_nutria_version": "0.10.0",
-    "max_nutria_version": null
-  },
-  "paths": {
-    "connections_dir": "connections",
-    "skills_dir": "skills",
-    "context_docs_dir": "context_docs",
-    "settings_schema": "settings.schema.json",
-    "hooks_file": "hooks/hooks.json",
-    "specs_dir": "specs",
-    "assets_dir": "assets"
-  },
-  "required_secrets": ["MY_API_KEY", "MY_API_SECRET"],
-  "optional_secrets": ["MY_REGION"],
-  "remote_endpoints": ["https://api.myservice.com"],
-  "capabilities": [
-    {
-      "id": "workspace.search",
-      "title": "Search workspace",
-      "description": "Read matching workspace resources.",
-      "effect": "read",
-      "tool": "search_workspace",
-      "connection_id": "workspace"
-    }
-  ],
-  "world_providers": [{
-    "id": "workspace",
-    "title": "Workspace",
-    "description": "Authoritative workspace resources.",
-    "connection_id": "workspace",
-    "resource_types": [{
-      "id": "workspace.item",
-      "title": "Workspace item",
-      "description": "One stable workspace item.",
-      "identity_fields": ["id"],
-      "search_capability": "workspace.search"
-    }]
-  }],
-  "tags": ["crm", "sales"],
-  "admin_extensions": [
-    {
-      "id": "email-audit",
-      "title": "Email Audit",
-      "description": "Inspect outbound emails from the plugin.",
-      "placement": "plugins.detail",
-      "kind": "table",
-      "schema_path": "assets/admin/email-audit.json"
-    }
-  ],
-  "admin_flows": [
-    {
-      "id": "external-login",
-      "title": "External login",
-      "description": "Complete an operator-driven linked-device or device-code login.",
-      "placement": "plugins.detail",
-      "kind": "external_auth",
-      "schema_path": "assets/admin/external-login-flow.json"
-    }
-  ],
-  "homepage": "https://github.com/myorg/my-plugin",
-  "license": "MIT",
-  "signature": null
-}
-```
-
-## Field reference
-
-### `schema_version` *(string, required)*
-
-The current manifest schema is `"2.1"`; schema `"2.0"` remains accepted for
-backward compatibility. Schema 2.1 adds provider-backed world graph contracts.
-Capabilities and reviewable actions are typed by the SDK; schema `1.x` is not
-accepted by the production host.
-
----
-
-### `id` *(string, required)*
-
-Unique plugin identifier. Used in tool names, secrets namespacing, and install paths.
-
-- Pattern: `^[a-z][a-z0-9\-]*$`
-- Max length: 64 characters
-- Must be globally unique across all plugins installed in a Nutria instance
-
-Examples: `"trello-workspace"`, `"mrw-shipping"`, `"hubspot-crm"`
-
----
-
-### `name` *(string, required)*
-
-Human-readable display name shown in the admin UI.
-
-- Min length: 1, Max length: 128
-
----
-
-### `version` *(string, required)*
-
-Plugin version using semantic versioning.
-
-- Must match semver: `MAJOR.MINOR.PATCH[-prerelease][+build]`
-- Examples: `"0.1.0"`, `"1.0.0"`, `"2.0.0-beta.1"`, `"0.0.1-alpha"`
-
----
-
-### `description` *(string, required)*
-
-Short description of the plugin's purpose.
-
-- Min length: 1, Max length: 1024
-
----
-
-### `author` *(string, required)*
-
-Publisher name and optional email.
-
-- Max length: 128
-- Example: `"Acme Corp <dev@acme.com>"`
-
----
-
-### `runtime_types` *(array of strings, required)*
-
-One or more runtime modes this plugin uses. At least one value required.
-
-| Value | Description |
-|-------|-------------|
-| `"declarative_api"` | Declarative REST/HTTP connection files — no server needed |
-| `"openapi_bridge"` | Auto-generates tools from an OpenAPI/Swagger spec |
-| `"soap_bridge"` | Auto-generates tools from a WSDL/SOAP spec |
-| `"remote_mcp"` | Connects to a separately deployed MCP server |
-
-Most plugins use a single runtime type. Plugins that bridge both REST and SOAP
-may list two.
-
----
-
-### `default_scope` *(string, optional)*
-
-Where the plugin is installed by default.
-
-| Value | Description |
-|-------|-------------|
-| `"platform"` | Available to all stores and all personas |
-| `"store"` | Available to all personas in a specific store (default) |
-| `"persona"` | Installed for a single persona only |
-
-Default: `"store"`
-
----
-
-### `compatibility` *(object, optional)*
-
-Version gates evaluated during install.
-
-```json
-{
-  "min_nutria_version": "0.10.0",
-  "max_nutria_version": null
-}
-```
-
-Both fields use semver and are optional. A `null` value means no constraint.
-
----
-
-### `paths` *(object, optional)*
-
-Override the default paths for plugin components inside the ZIP. Useful only
-if you need a non-standard layout. All paths must be relative and contain
-no empty, `.`, or `..` segments.
-
-Defaults:
-
-| Field | Default |
-|-------|---------|
-| `connections_dir` | `"connections"` |
-| `skills_dir` | `"skills"` |
-| `context_docs_dir` | `"context_docs"` |
-| `settings_schema` | `"settings.schema.json"` |
-| `hooks_file` | `"hooks/hooks.json"` |
-| `specs_dir` | `"specs"` |
-| `assets_dir` | `"assets"` |
-
----
-
-## `settings.schema.json` host extensions
-
-Nutria plugin settings use JSON Schema as the base format, but ChatBotNutralia
-also recognizes a small host-specific extension for per-store admin rendering.
-
-### `x-nutria-store-scoped`
-
-When a settings field is declared as:
-
-```json
-{
-  "type": "object",
-  "default": {},
-  "additionalProperties": { "type": "string" },
-  "x-nutria-store-scoped": true,
-  "x-nutria-store-default-key": "default"
-}
-```
-
-ChatBotNutralia renders one input per loaded store plus one fallback input using
-`x-nutria-store-default-key` (defaulting to `default` when omitted).
-
-Expected persistence shape:
-
-```json
-{
-  "field_name": {
-    "nutrivip": "value-for-nutrivip",
-    "fire": "value-for-fire",
-    "default": "fallback-value"
-  }
-}
-```
-
-Use this only for settings whose values are truly store-specific. Plugins should
-still validate and interpret the stored object at runtime.
-
----
-
-### `required_secrets` *(array of strings, optional)*
-
-Names of secrets the plugin needs. The Nutria instance will prompt the
-admin to configure these after install.
-
-**Rules:**
-- Values are names only — never put actual secret values here
-- Names are deduplicated and whitespace-stripped automatically
-- Secrets are accessed at runtime via the Nutria secrets provider
-- Optional secrets should be documented in `settings.schema.json` or `README.md`
-
-Example:
-```json
-"required_secrets": ["STRIPE_API_KEY", "STRIPE_WEBHOOK_SECRET"]
-```
-
-### `optional_secrets` *(array of strings, optional)*
-
-Secret names that improve a plugin's operation but are not required for
-installation. Values are never stored in the manifest. Names are deduplicated
-and resolved by the host's secret provider at runtime.
-
----
-
-### `remote_endpoints` *(array of strings, optional)*
-
-Absolute `http://` or `https://` URLs that the plugin will connect to.
-These are validated at install time for SSRF safety.
-
-**Blocked automatically:**
-- `localhost` and `localhost.localdomain`
-- Loopback addresses (`127.0.0.0/8`, `::1`)
-- Private IP ranges (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`)
-- Link-local addresses (`169.254.0.0/16`, `fe80::/10`)
-- Reserved IP ranges
-
-Example:
-```json
-"remote_endpoints": [
-  "https://api.stripe.com",
-  "https://hooks.stripe.com"
-]
-```
-
----
-
-### `capabilities` *(array of objects, optional)*
-
-Each entry is a `CapabilityDescriptor` with a stable `id`, title,
-description, effect (`read`, `prepare`, `write`, or `external_write`), concrete
-tool name, optional connection, typed input/resource bindings, and optional
-outputs. Host-only delivery capabilities must set `model_callable` to `false`.
-See [reviewable-actions.md](reviewable-actions.md) for the complete schema.
-
----
-
-### `world_providers` *(array of objects, optional; schema 2.1)*
-
-Each provider declares a stable `id`, title, description, optional
-`connection_id` and `health_capability`, plus one or more resource types. A
-resource type has a stable built-in or plugin-namespaced custom `id`, at least
-one `identity_fields` entry, optional `search_capability` and
-`inspect_capability`, bounded `ttl_seconds`, and named safe `projections`.
-
-Referenced capabilities must exist in the same manifest. Provider declarations
-describe navigation only: the host still enforces audience, persona assignment,
-connection state, and effect authorization before executing a tool.
-
----
-
-### `tags` *(array of strings, optional)*
-
-Discovery tags shown in the plugin marketplace.
-
-Examples: `["crm", "sales"]`, `["shipping", "logistics", "soap"]`
-
----
-
-### `reviewable_actions` *(array of objects, optional; schema 2.0)*
-
-Reviewable-action contracts describe delivery adapters for drafts owned by
-ChatBotNutralia. Each contract selects a channel and `new`/`reply` mode,
-declares the plugin connection and final execution capability, and maps the
-SDK's semantic fields to the tool's argument names. `required_fields` must
-include `recipient` and `body`; `editable_fields` cannot overlap immutable
-fields. Replies may declare a pure `prepare_capability`. It must not save a
-draft, send a message, or perform another external write. See
-[reviewable-actions.md](reviewable-actions.md) for the complete schema and
-offline/revalidation rules.
-
----
-
-### `admin_extensions` *(array of objects, optional)*
-
-Declarative admin/frontend extensions that ChatBotNutralia can render with its
-own host UI. This is the safe way for plugins to add operator-facing views
-without shipping arbitrary frontend code.
-
-Current supported values:
-
-- `placement`: `"plugins.detail"`
-- `kind`: `"table"`
-
-Example:
-
-```json
-"admin_extensions": [
-  {
-    "id": "email-audit",
-    "title": "Email Audit",
-    "description": "Inspect outbound emails from the plugin.",
-    "placement": "plugins.detail",
-    "kind": "table",
-    "schema_path": "assets/admin/email-audit.json"
-  }
-]
-```
-
-Rules:
-
-- `id` uses the same slug format as plugin ids: `^[a-z][a-z0-9\\-]*$`
-- `schema_path` must be a **relative** path inside the plugin bundle
-- `schema_path` must point to a **JSON** file
-
----
-
-### `admin_flows` *(array of objects, optional)*
-
-Declarative operator workflows that ChatBotNutralia can render and drive through
-approved plugin runtime actions. Use this for non-secret interactive flows such
-as QR pairing, OAuth/device-code login, or phone-code verification.
-
-Current supported values:
-
-- `placement`: `"plugins.detail"`
-- `kind`: `"external_auth"`
-
-Example:
-
-```json
-"admin_flows": [
-  {
-    "id": "external-login",
-    "title": "External login",
-    "description": "Pair an external account without storing a static secret.",
-    "placement": "plugins.detail",
-    "kind": "external_auth",
-    "schema_path": "assets/admin/external-login-flow.json"
-  }
-]
-```
-
-Rules:
-
-- `id` uses the same slug format as plugin ids: `^[a-z][a-z0-9\\-]*$`
-- `schema_path` must be a **relative** path inside the plugin bundle
-- `schema_path` must point to a **JSON** file
-- The referenced schema JSON must contain `"type": "external_auth"`
-- Flow actions should reference plugin-owned runtime tools and must not embed
-  shell commands, secrets, arbitrary JavaScript, or host-specific code
-
-See [admin-flows.md](admin-flows.md) for the flow schema contract.
-
----
-
-### `homepage` *(string, optional)*
-
-URL to the plugin's repository or documentation page.
-
----
-
-### `license` *(string, optional)*
-
-SPDX license identifier. Examples: `"MIT"`, `"Apache-2.0"`, `"LGPL-3.0"`.
-
----
-
-### `signature` *(string, optional)*
-
-Hex-encoded ECDSA-P256 DER signature. Set by `nutria-plugin sign` or
-`nutria-plugin pack --key`. Do not edit this field manually.
-
-See [security.md](security.md) for details on the signing workflow.
+# plugin.json manifest reference
+
+`plugin.json` is the single source of truth for plugin identity, runtime,
+capability authority, and provider topology. SDK 0.2.3 accepts exactly schema
+`2.2`; older schemas and unknown fields fail validation.
+
+## Required top-level fields
+
+| Field | Contract |
+|---|---|
+| `schema_version` | Literal `"2.2"` |
+| `id` | Lowercase plugin slug |
+| `name`, `description`, `author` | Non-empty display metadata |
+| `version` | Semantic version |
+| `runtime_types` | One or more supported runtime types |
+| `capabilities` | At least one typed capability |
+| `world_providers` | At least one typed provider |
+
+Optional fields include `default_scope`, `paths`, `required_secrets`,
+`optional_secrets`, `remote_endpoints`, `tags`, `reviewable_actions`,
+`admin_extensions`, `admin_flows`, `mcp_server_entry`, `homepage`, `license`,
+and `signature`. A `compatibility` field is not part of schema 2.2.
+
+## Capability descriptor
+
+Each capability declares:
+
+- stable `id`, `title`, and `description`;
+- `effect`: `read`, `prepare`, `write`, or `external_write`;
+- concrete `tool` and optional `connection_id`;
+- typed `inputs`, `consumes`, and `produces` bindings;
+- required `requirements.authority`, `requirements.audience`, and
+  `requirements.task_context`;
+- required `exposure`: `model`, `host`, or `admin`.
+
+`host` and `admin` exposure require `non_callable_reason` with a stable code and
+safe summary. `model` exposure must not declare it. Task-owned resource bindings
+require `task_context: "required"`.
+
+A model-exposed `external_write` must declare `prepared_action`, `idempotency`,
+and `completion`. Reviewable delivery capabilities are instead host-only and
+are linked through `reviewable_action_id`.
+
+## World provider descriptor
+
+Every provider declares a stable ID, title, description, optional connection
+and health capability, and one or more resource types. Each resource type has:
+
+- a stable built-in or plugin-namespaced `id`;
+- one or more `identity_fields`;
+- optional search/inspect capability references;
+- optional version field, TTL, and named safe/authorized projections.
+
+Capability connections must have a matching provider connection. Referenced
+search, inspect, health, prepare, and execute capabilities must exist in the
+same manifest.
+
+## Reviewable actions
+
+The host owns the encrypted draft and approval lifecycle. A reviewable action
+maps stable semantic fields to one host-only external-write capability. Every
+delivery maps `recipient`, `body`, and `idempotency_key`; required capability
+inputs must be mapped. Preparation capabilities use `effect: "prepare"` and
+must be pure/read-only. See [reviewable-actions.md](reviewable-actions.md).
+
+## Paths and settings
+
+All component paths are relative and cannot contain empty, `.` or `..`
+segments. `settings.schema.json` may use the host extensions
+`x-nutria-store-scoped` and `x-nutria-store-default-key` for values that truly
+vary by store.
+
+## Secrets and endpoints
+
+Secret arrays contain names only. Remote endpoints must be absolute HTTP(S)
+URLs and cannot target localhost, loopback, link-local, private, or reserved IP
+ranges.
 
 ## Validation
 
 ```bash
-nutria-plugin validate .
+uv run nutria-plugin validate .
+uv run nutria-plugin pack . --output dist/plugin.zip
 ```
-
-The SDK validates all constraints above and reports all errors at once.
-Validation is also run automatically before packing.
-
-## Forbidden patterns
-
-The following will cause validation errors:
-- `id` starting with a digit or containing uppercase letters
-- `version` not matching semver
-- `required_secrets` containing objects instead of strings
-- `remote_endpoints` targeting private/internal addresses
-- Any `paths` value that is absolute or contains `..`
-- Missing or invalid schema files referenced by `admin_extensions` or `admin_flows`
-- Fields not listed above (extra fields are forbidden — `"extra": "forbid"`)

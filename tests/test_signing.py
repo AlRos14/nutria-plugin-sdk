@@ -17,7 +17,7 @@ from nutria_plugin.signing import (
 
 def _minimal_dict(**overrides) -> dict:
     base = {
-        "schema_version": "2.0",
+        "schema_version": "2.2",
         "id": "test-plugin",
         "name": "Test",
         "version": "1.0.0",
