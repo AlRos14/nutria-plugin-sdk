@@ -36,16 +36,12 @@ class NonCallableReason(BaseModel):
 
 
 class PreparedActionDescriptor(BaseModel):
-    """Exact-preview contract used by the host prepared-action boundary."""
+    """Portable exact-preview contract used by every Nutria host."""
 
     preview_argument: str = Field(..., pattern=r"^[a-zA-Z][a-zA-Z0-9_-]{0,127}$")
     preview_value: Any
     execute_value: Any
-    adapter: str = Field(..., pattern=r"^[a-z][a-z0-9_.-]{0,127}$")
     ttl_seconds: int = Field(..., ge=60, le=86_400)
-    merge_previews: bool
-    guard_mode: str = Field(..., pattern=r"^(always|pending_only)$")
-    argument_default: Any
 
     model_config = {"extra": "forbid"}
 
@@ -152,12 +148,15 @@ class ResourceBinding(BaseModel):
 
 
 class CapabilityInputBinding(BaseModel):
-    """Maps a semantic input to one plugin tool argument."""
+    """Maps a typed value or world resource to one plugin argument."""
 
+    kind: Literal["value", "resource"]
     semantic_field: str = Field(..., pattern=r"^[a-z][a-z0-9_.-]{0,127}$")
     argument_name: str = Field(..., pattern=r"^[a-zA-Z][a-zA-Z0-9_-]{0,127}$")
     resource_type: ResourceType | str | None = None
     required: bool = True
+    sensitivity: Literal["safe", "personal"] = "safe"
+    accepted_origins: list[Literal["current_user", "world_resource"]] = Field(min_length=1)
 
     model_config = {"extra": "forbid"}
 
@@ -168,11 +167,21 @@ class CapabilityInputBinding(BaseModel):
             _validate_resource_type_id(value)
         return value
 
+    @model_validator(mode="after")
+    def _validate_kind(self) -> "CapabilityInputBinding":
+        if self.kind == "resource" and self.resource_type is None:
+            raise ValueError("resource inputs require resource_type")
+        if self.kind == "value" and self.resource_type is not None:
+            raise ValueError("value inputs must not declare resource_type")
+        if self.sensitivity == "personal" and "current_user" not in self.accepted_origins:
+            raise ValueError("personal inputs must accept current_user evidence")
+        return self
+
 
 class CapabilityOutputBinding(BaseModel):
     """Maps one plugin result field to a typed resource output."""
 
-    field_name: str = Field(..., pattern=r"^[a-zA-Z][a-zA-Z0-9_.-]{0,127}$")
+    result_path: str = Field(..., pattern=r"^\$?(?:\.[a-zA-Z][a-zA-Z0-9_-]*)+$")
     resource_type: ResourceType | str
     output_name: str = Field(..., pattern=r"^[a-z][a-z0-9_.-]{0,127}$")
     many: bool = False
@@ -335,6 +344,15 @@ class CapabilityDescriptor(BaseModel):
                 raise ValueError(
                     "model-selectable external writes require execution idempotency"
                 )
+        if self.exposure == CapabilityExposure.MODEL and self.effect == CapabilityEffect.READ:
+            if not self.produces:
+                raise ValueError("model-selectable reads require declared outputs")
+        if self.exposure == CapabilityExposure.MODEL and self.effect in {
+            CapabilityEffect.WRITE,
+            CapabilityEffect.EXTERNAL_WRITE,
+        }:
+            if not self.inputs:
+                raise ValueError("model-selectable writes require declared inputs")
         return self
 
 

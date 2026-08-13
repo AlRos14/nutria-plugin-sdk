@@ -18,7 +18,7 @@ from nutria_plugin.manifest import (
 
 def _minimal_manifest(**overrides) -> dict:
     base = {
-        "schema_version": "2.2",
+        "schema_version": "3.0",
         "id": "test-plugin",
         "name": "Test Plugin",
         "version": "1.0.0",
@@ -39,6 +39,13 @@ def _minimal_manifest(**overrides) -> dict:
                     "task_context": "optional",
                 },
                 "exposure": "model",
+                "produces": [
+                    {
+                        "result_path": ".health",
+                        "resource_type": "test.resource",
+                        "output_name": "health",
+                    }
+                ],
             }
         ],
         "world_providers": [
@@ -97,21 +104,21 @@ def test_version_must_be_semver():
         PluginManifest.model_validate(_minimal_manifest(version="1.0"))
 
 
-def test_schema_version_must_be_2_2():
+def test_schema_version_must_be_3_0():
     with pytest.raises(ValidationError):
         PluginManifest.model_validate(_minimal_manifest(schema_version="1.1"))
 
 
-@pytest.mark.parametrize("version", ["1.0", "2.0", "2.1", "2.3"])
+@pytest.mark.parametrize("version", ["1.0", "2.0", "2.1", "2.2", "2.3"])
 def test_other_schema_versions_are_rejected(version):
     with pytest.raises(ValidationError):
         PluginManifest.model_validate(_minimal_manifest(schema_version=version))
 
 
-def test_schema_2_2_world_provider_accepts_custom_resource_type():
+def test_schema_3_0_world_provider_accepts_custom_resource_type():
     manifest = PluginManifest.model_validate(
         _minimal_manifest(
-            schema_version="2.2",
+            schema_version="3.0",
             capabilities=[
                 {
                     "id": "workspace.search",
@@ -128,7 +135,7 @@ def test_schema_2_2_world_provider_accepts_custom_resource_type():
                     "exposure": "model",
                     "produces": [
                         {
-                            "field_name": "items",
+                            "result_path": ".items",
                             "resource_type": "workspace.item",
                             "output_name": "items",
                             "many": True,
@@ -159,7 +166,7 @@ def test_schema_2_2_world_provider_accepts_custom_resource_type():
         )
     )
 
-    assert manifest.schema_version == "2.2"
+    assert manifest.schema_version == "3.0"
     assert manifest.world_providers[0].resource_types[0].id == "workspace.item"
 
 
@@ -167,7 +174,7 @@ def test_world_provider_rejects_unknown_capability_reference():
     with pytest.raises(ValidationError, match="unknown capability"):
         PluginManifest.model_validate(
             _minimal_manifest(
-                schema_version="2.2",
+                schema_version="3.0",
                 world_providers=[
                     {
                         "id": "workspace",
@@ -175,6 +182,12 @@ def test_world_provider_rejects_unknown_capability_reference():
                         "description": "Authoritative workspace provider.",
                         "connection_id": "test",
                         "resource_types": [
+                            {
+                                "id": "test.resource",
+                                "title": "Test resource",
+                                "description": "One stable test resource.",
+                                "identity_fields": ["id"],
+                            },
                             {
                                 "id": "workspace.item",
                                 "title": "Workspace item",
@@ -187,6 +200,13 @@ def test_world_provider_rejects_unknown_capability_reference():
                 ],
             )
         )
+
+
+def test_capability_output_requires_provider_resource_declaration():
+    payload = _minimal_manifest()
+    payload["capabilities"][0]["produces"][0]["resource_type"] = "missing.resource"
+    with pytest.raises(ValidationError, match="not declared by provider"):
+        PluginManifest.model_validate(payload)
 
 
 def test_empty_runtime_types_rejected():

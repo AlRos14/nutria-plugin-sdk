@@ -28,7 +28,7 @@ def _make_zip(files: dict[str, str]) -> bytes:
 
 VALID_MANIFEST = json.dumps(
     {
-        "schema_version": "2.2",
+        "schema_version": "3.0",
         "id": "test-plugin",
         "name": "Test",
         "version": "1.0.0",
@@ -48,7 +48,14 @@ VALID_MANIFEST = json.dumps(
                     "audience": ["private_internal"],
                     "task_context": "optional"
                 },
-                "exposure": "model"
+                "exposure": "model",
+                "produces": [
+                    {
+                        "result_path": ".health",
+                        "resource_type": "test.resource",
+                        "output_name": "health"
+                    }
+                ]
             }
         ],
         "world_providers": [

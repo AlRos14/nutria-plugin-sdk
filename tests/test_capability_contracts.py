@@ -1,4 +1,4 @@
-"""Strict world-graph capability contracts introduced in SDK 0.2.3."""
+"""Strict world-graph capability contracts introduced in SDK 0.3.0."""
 
 from __future__ import annotations
 
@@ -21,6 +21,15 @@ def _capability(**overrides):
             "task_context": "optional",
         },
         "exposure": "model",
+        "inputs": [
+            {
+                "kind": "value",
+                "semantic_field": "recipient",
+                "argument_name": "recipient",
+                "sensitivity": "personal",
+                "accepted_origins": ["current_user"],
+            }
+        ],
     }
     payload.update(overrides)
     return payload
@@ -32,11 +41,7 @@ def _safety_contracts():
             "preview_argument": "preview_only",
             "preview_value": True,
             "execute_value": False,
-            "adapter": "exact_preview",
             "ttl_seconds": 3600,
-            "merge_previews": True,
-            "guard_mode": "pending_only",
-            "argument_default": True,
         },
         "idempotency": {
             "argument_name": "idempotency_key",
@@ -47,13 +52,33 @@ def _safety_contracts():
 
 
 def test_model_capability_requires_explicit_model_exposure():
-    descriptor = CapabilityDescriptor.model_validate(_capability(effect="read"))
+    descriptor = CapabilityDescriptor.model_validate(
+        _capability(
+            effect="read",
+            produces=[
+                {
+                    "result_path": ".shipment",
+                    "resource_type": "mrw.shipment",
+                    "output_name": "shipment",
+                }
+            ],
+        )
+    )
     assert descriptor.exposure == CapabilityExposure.MODEL
     assert descriptor.non_callable_reason is None
 
 
 def test_missing_exposure_is_rejected():
-    payload = _capability(effect="read")
+    payload = _capability(
+        effect="read",
+        produces=[
+            {
+                "result_path": ".shipment",
+                "resource_type": "mrw.shipment",
+                "output_name": "shipment",
+            }
+        ],
+    )
     payload.pop("exposure")
     with pytest.raises(ValidationError, match="exposure"):
         CapabilityDescriptor.model_validate(payload)
@@ -82,7 +107,7 @@ def test_model_selectable_external_write_requires_all_safety_contracts():
     descriptor = CapabilityDescriptor.model_validate(
         _capability(**_safety_contracts())
     )
-    assert descriptor.prepared_action.adapter == "exact_preview"
+    assert descriptor.prepared_action.preview_argument == "preview_only"
     assert descriptor.idempotency.required_for_execution is True
     assert descriptor.completion.receipts == ["shipping.shipment.created"]
 
@@ -111,5 +136,42 @@ def test_task_owned_resources_require_task_context():
             _capability(
                 effect="read",
                 consumes=[{"name": "action", "resource_type": "prepared_action"}],
+                produces=[
+                    {
+                        "result_path": ".shipment",
+                        "resource_type": "mrw.shipment",
+                        "output_name": "shipment",
+                    }
+                ],
+            )
+        )
+
+
+def test_model_read_requires_typed_output():
+    with pytest.raises(ValidationError, match="declared outputs"):
+        CapabilityDescriptor.model_validate(_capability(effect="read", inputs=[]))
+
+
+def test_unknown_prepared_action_adapter_is_rejected():
+    contracts = _safety_contracts()
+    contracts["prepared_action"]["adapter"] = "plugin.argument_toggle"
+    with pytest.raises(ValidationError, match="adapter"):
+        CapabilityDescriptor.model_validate(_capability(**contracts))
+
+
+def test_personal_input_requires_current_user_origin():
+    with pytest.raises(ValidationError, match="current_user"):
+        CapabilityDescriptor.model_validate(
+            _capability(
+                inputs=[
+                    {
+                        "kind": "value",
+                        "semantic_field": "recipient",
+                        "argument_name": "recipient",
+                        "sensitivity": "personal",
+                        "accepted_origins": ["world_resource"],
+                    }
+                ],
+                **_safety_contracts(),
             )
         )

@@ -2,8 +2,8 @@
 
 SDK for building, validating, signing, and packaging Nutria plugins.
 
-Release `0.2.3` is intentionally breaking. It accepts only manifest schema
-`2.2`, requires typed capabilities and world providers, and makes authority,
+Release `0.3.0` is intentionally breaking. It accepts only manifest schema
+`3.0`, requires typed capabilities and world providers, and makes authority,
 audience, task-context requirements, and exposure explicit. There is no runtime
 migration for schema 2.0/2.1 manifests and no compatibility/model-callability
 field.
@@ -15,7 +15,7 @@ and exact delivery of an approved snapshot.
 ## Install
 
 ```bash
-uv add nutria-plugin==0.2.3
+uv add nutria-plugin==0.3.0
 ```
 
 ## Scaffold and validate
@@ -30,11 +30,11 @@ The generated directory contains `plugin.json`, component directories for
 connections, skills, context documents, specs and hooks, plus an optional
 settings schema and assets.
 
-## Minimal schema 2.2 manifest
+## Minimal schema 3.0 manifest
 
 ```json
 {
-  "schema_version": "2.2",
+  "schema_version": "3.0",
   "id": "my-workspace-plugin",
   "name": "My Workspace Plugin",
   "version": "0.1.0",
@@ -55,7 +55,13 @@ settings schema and assets.
       "audience": ["team_internal"],
       "task_context": "optional"
     },
-    "exposure": "model"
+    "exposure": "model",
+    "produces": [{
+      "result_path": ".items",
+      "resource_type": "workspace.item",
+      "output_name": "items",
+      "many": true
+    }]
   }],
   "world_providers": [{
     "id": "workspace",

@@ -25,7 +25,7 @@ class PackagingError(Exception):
 SCAFFOLD_TEMPLATE = {
     "plugin.json": lambda plugin_id, name: json.dumps(
         {
-            "schema_version": "2.2",
+            "schema_version": "3.0",
             "id": plugin_id,
             "name": name,
             "version": "0.1.0",
@@ -49,6 +49,13 @@ SCAFFOLD_TEMPLATE = {
                         "task_context": "optional",
                     },
                     "exposure": "model",
+                    "produces": [
+                        {
+                            "result_path": ".health",
+                            "resource_type": f"{plugin_id}.resource",
+                            "output_name": "health",
+                        }
+                    ],
                 }
             ],
             "world_providers": [

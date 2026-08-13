@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.0
+
+- Replace adapter-specific prepared actions with one portable exact-preview protocol.
+- Require typed value/resource inputs with explicit origin and sensitivity.
+- Require JSON result paths for model-visible read outputs and reject schema 2.2.
+
 ## 0.2.3
 
 - Make manifest schema 2.2 the only accepted plugin contract.

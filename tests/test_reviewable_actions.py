@@ -60,31 +60,52 @@ def _capabilities():
                 {"name": "action", "resource_type": "prepared_action"}
             ],
             "inputs": [
-                {"semantic_field": "recipient", "argument_name": "recipient"},
-                {"semantic_field": "body", "argument_name": "body"},
                 {
+                    "kind": "value",
+                    "semantic_field": "recipient",
+                    "argument_name": "recipient",
+                    "sensitivity": "personal",
+                    "accepted_origins": ["current_user", "world_resource"],
+                },
+                {
+                    "kind": "value",
+                    "semantic_field": "body",
+                    "argument_name": "body",
+                    "accepted_origins": ["current_user"],
+                },
+                {
+                    "kind": "value",
                     "semantic_field": "subject",
                     "argument_name": "subject",
                     "required": False,
+                    "accepted_origins": ["current_user", "world_resource"],
                 },
                 {
+                    "kind": "value",
                     "semantic_field": "reply_target",
                     "argument_name": "reply_to_message_id",
                     "required": False,
+                    "accepted_origins": ["world_resource"],
                 },
                 {
+                    "kind": "value",
                     "semantic_field": "source_ref",
                     "argument_name": "source_email_id",
                     "required": False,
+                    "accepted_origins": ["world_resource"],
                 },
                 {
+                    "kind": "value",
                     "semantic_field": "source_fingerprint",
                     "argument_name": "source_fingerprint",
                     "required": False,
+                    "accepted_origins": ["world_resource"],
                 },
                 {
+                    "kind": "value",
                     "semantic_field": "idempotency_key",
                     "argument_name": "idempotency_key",
+                    "accepted_origins": ["current_user"],
                 },
             ],
             "requirements": {
@@ -104,7 +125,7 @@ def _capabilities():
 
 def _manifest(**overrides):
     data = {
-        "schema_version": "2.2",
+        "schema_version": "3.0",
         "id": "email-plugin",
         "name": "Email",
         "version": "1.0.0",
