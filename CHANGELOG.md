@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.2
+
+- Add transport-neutral MCP result normalization for FastMCP scalar JSON envelopes.
+- Add declared-output projection and cardinality conformance helpers for plugin and host tests.
+- Document protocol-level validation in addition to static manifest validation.
+
 ## 0.3.1
 
 - Create missing parent directories for explicit plugin package output paths.

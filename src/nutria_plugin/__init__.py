@@ -15,7 +15,7 @@ Signing:
     generate_keypair, sign_manifest, verify_manifest, SignatureStatus
 """
 
-__version__ = "0.3.1"
+__version__ = "0.3.2"
 
 from .capabilities import (
     CapabilityDescriptor,
@@ -55,6 +55,13 @@ from .manifest import (
 from .bundle import PluginBundleError, extract_plugin_bundle, load_plugin_bundle, validate_zip
 from .packaging import PackagingError, pack_plugin, scaffold_plugin, validate_plugin_dir
 from .signing import SignatureStatus, generate_keypair, sign_manifest, verify_manifest
+from .mcp_results import (
+    MCPResultContractError,
+    normalize_mcp_result,
+    project_result_path,
+    validate_capability_result,
+    validate_declared_outputs,
+)
 
 __all__ = [
     "__version__",
@@ -103,4 +110,10 @@ __all__ = [
     "generate_keypair",
     "sign_manifest",
     "verify_manifest",
+    # MCP result contracts
+    "MCPResultContractError",
+    "normalize_mcp_result",
+    "project_result_path",
+    "validate_capability_result",
+    "validate_declared_outputs",
 ]

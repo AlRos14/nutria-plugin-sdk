@@ -2,7 +2,7 @@
 
 SDK for building, validating, signing, and packaging Nutria plugins.
 
-Release `0.3.1` uses the intentionally breaking schema introduced in 0.3.0. It accepts only manifest schema
+Release `0.3.2` uses the intentionally breaking schema introduced in 0.3.0. It accepts only manifest schema
 `3.0`, requires typed capabilities and world providers, and makes authority,
 audience, task-context requirements, and exposure explicit. There is no runtime
 migration for schema 2.0/2.1 manifests and no compatibility/model-callability
@@ -15,7 +15,7 @@ and exact delivery of an approved snapshot.
 ## Install
 
 ```bash
-uv add nutria-plugin==0.3.1
+uv add nutria-plugin==0.3.2
 ```
 
 ## Scaffold and validate
@@ -99,6 +99,26 @@ manifest = PluginManifest.from_file(Path("plugin.json"))
 errors = validate_plugin_dir(Path("."))
 archive = pack_plugin(Path("."), Path("dist/plugin.zip"))
 ```
+
+### Validate MCP results against declared outputs
+
+Manifest validation checks the descriptor itself. Protocol-level plugin tests
+must also validate the payload Nutria receives after MCP transport:
+
+```python
+from nutria_plugin import validate_capability_result
+
+payload = validate_capability_result(
+    capability,
+    structured_content=call_result.structuredContent,
+    text_content=call_result.content[0].text,
+)
+```
+
+This normalizes FastMCP's scalar JSON envelope and raises
+`MCPResultContractError` when a declared path such as `.items` does not
+materialize. It does not execute the tool and should be used in a bounded,
+fixture-backed or read-only MCP integration test.
 
 The package exports the strict manifest, capability, provider, reviewable-action,
 admin extension/flow, bundle, packaging, and signing models/functions documented
