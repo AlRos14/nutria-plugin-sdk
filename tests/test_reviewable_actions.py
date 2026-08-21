@@ -39,9 +39,16 @@ def _capabilities():
             "id": "email.reply.prepare",
             "title": "Prepare email reply",
             "description": "Resolve the source email envelope without writing.",
-            "effect": "prepare",
+            "effect": "read",
             "tool": "prepare_email_reply",
             "connection_id": "email",
+            "produces": [
+                {
+                    "result_path": ".prepared_action",
+                    "resource_type": "prepared_action",
+                    "output_name": "prepared_action",
+                }
+            ],
             "requirements": {
                 "authority": "read",
                 "audience": ["private_internal", "team_internal"],
@@ -125,7 +132,7 @@ def _capabilities():
 
 def _manifest(**overrides):
     data = {
-        "schema_version": "3.0",
+        "schema_version": "4.0",
         "id": "email-plugin",
         "name": "Email",
         "version": "1.0.0",
@@ -220,8 +227,31 @@ def test_reviewable_external_write_must_be_host_only():
         PluginManifest.model_validate(_manifest(capabilities=capabilities))
 
 
-def test_preparation_capability_must_be_pure_prepare():
+def test_preparation_capability_is_identified_by_prepared_action_output():
+    capabilities = _capabilities()
+    capabilities[0]["produces"] = [
+        {
+            "result_path": ".message",
+            "resource_type": "email_message",
+            "output_name": "message",
+        }
+    ]
+    with pytest.raises(ValidationError, match="must produce prepared_action"):
+        PluginManifest.model_validate(_manifest(capabilities=capabilities))
+
+
+def test_preparation_capability_may_use_its_actual_write_effect():
     capabilities = _capabilities()
     capabilities[0]["effect"] = "write"
-    with pytest.raises(ValidationError):
-        PluginManifest.model_validate(_manifest(capabilities=capabilities))
+    capabilities[0]["inputs"] = [
+        {
+            "kind": "value",
+            "semantic_field": "body",
+            "argument_name": "body",
+            "accepted_origins": ["current_user"],
+        }
+    ]
+
+    manifest = PluginManifest.model_validate(_manifest(capabilities=capabilities))
+
+    assert manifest.capabilities[0].effect.value == "write"

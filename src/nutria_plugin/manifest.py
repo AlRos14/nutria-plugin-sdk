@@ -315,7 +315,7 @@ class PluginAdminFlow(BaseModel):
 class PluginManifest(BaseModel):
     """Manifest stored in plugin.json — the single source of truth for plugin metadata."""
 
-    schema_version: Literal["3.0"]
+    schema_version: Literal["4.0"]
     id: str = Field(..., pattern=r"^[a-z][a-z0-9\-]*$", max_length=64)
     name: str = Field(..., min_length=1, max_length=128)
     version: str = Field(..., min_length=5, max_length=64)
@@ -391,6 +391,11 @@ class PluginManifest(BaseModel):
             for provider in self.world_providers
             if provider.connection_id
         }
+        host_owned_resource_types = {
+            ResourceType.TASK.value,
+            ResourceType.ARTIFACT.value,
+            ResourceType.PREPARED_ACTION.value,
+        }
         for capability in self.capabilities:
             if not capability.connection_id:
                 continue
@@ -400,7 +405,7 @@ class PluginManifest(BaseModel):
                 if isinstance(output.resource_type, ResourceType)
                 else str(output.resource_type)
                 for output in capability.produces
-            } - available_types
+            } - available_types - host_owned_resource_types
             if undeclared:
                 raise ValueError(
                     f"capability {capability.id!r} produces resource types not declared by "
@@ -475,8 +480,16 @@ class PluginManifest(BaseModel):
                         f"reviewable action {action.id!r} references unknown preparation capability "
                         f"{action.prepare_capability!r}"
                     )
-                if prepare.effect != CapabilityEffect.PREPARE:
-                    raise ValueError("reviewable preparation capability must use effect=prepare")
+                prepared_outputs = {
+                    output.resource_type.value
+                    if isinstance(output.resource_type, ResourceType)
+                    else str(output.resource_type)
+                    for output in prepare.produces
+                }
+                if ResourceType.PREPARED_ACTION.value not in prepared_outputs:
+                    raise ValueError(
+                        "reviewable preparation capability must produce prepared_action"
+                    )
                 if prepare.connection_id != action.connection_id:
                     raise ValueError(
                         "reviewable preparation capability connection does not match action"

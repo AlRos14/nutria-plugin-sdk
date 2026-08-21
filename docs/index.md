@@ -1,10 +1,10 @@
 # nutria-plugin SDK documentation
 
-Developer reference for SDK `0.3.1` and manifest schema `3.0`.
+Developer reference for SDK `0.4.0` and manifest schema `4.0`.
 
 | Document | Purpose |
 |---|---|
-| [quickstart.md](quickstart.md) | Build a strict schema 3.0 plugin |
+| [quickstart.md](quickstart.md) | Build a strict schema 4.0 plugin |
 | [manifest.md](manifest.md) | Manifest, capability, and provider contracts |
 | [reviewable-actions.md](reviewable-actions.md) | Host-owned drafts and external delivery |
 | [python-api.md](python-api.md) | Public Python API |
@@ -16,6 +16,6 @@ Developer reference for SDK `0.3.1` and manifest schema `3.0`.
 | [cli.md](cli.md) | CLI commands |
 
 A plugin bundle can contain connections, skills, context documents, hooks,
-settings, specs, and declarative admin assets. Its schema 3.0 manifest must also
+settings, specs, and declarative admin assets. Its schema 4.0 manifest must also
 declare at least one typed capability and world provider. Older schemas are not
 loaded or migrated.

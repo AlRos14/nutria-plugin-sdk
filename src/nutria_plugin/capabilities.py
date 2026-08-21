@@ -13,7 +13,6 @@ _RESOURCE_TYPE_PATTERN = r"^[a-z][a-z0-9_.-]{0,127}$"
 
 class CapabilityEffect(str, Enum):
     READ = "read"
-    PREPARE = "prepare"
     WRITE = "write"
     EXTERNAL_WRITE = "external_write"
 
@@ -120,7 +119,7 @@ class CapabilityRequirement(BaseModel):
 
     authority: Literal["read", "write_internal", "write_external"]
     audience: list[str] = Field(..., min_length=1)
-    task_context: Literal["optional", "required"]
+    task_context: Literal["optional", "required", "forbidden"] = "optional"
 
     model_config = {"extra": "forbid"}
 
@@ -312,19 +311,6 @@ class CapabilityDescriptor(BaseModel):
         output_names = [item.output_name for item in self.produces]
         if len(output_names) != len(set(output_names)):
             raise ValueError("capability outputs must not repeat output names")
-        task_owned_types = {
-            ResourceType.TASK.value,
-            ResourceType.ARTIFACT.value,
-            ResourceType.PREPARED_ACTION.value,
-        }
-        bound_types = {
-            item.resource_type.value
-            if isinstance(item.resource_type, ResourceType)
-            else str(item.resource_type)
-            for item in (*self.consumes, *self.produces)
-        }
-        if bound_types & task_owned_types and self.requirements.task_context != "required":
-            raise ValueError("task-owned resources require task_context=required")
         if self.effect == CapabilityEffect.EXTERNAL_WRITE and self.exposure == CapabilityExposure.MODEL:
             missing = [
                 name

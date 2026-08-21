@@ -1,4 +1,4 @@
-"""Strict world-graph capability contracts introduced in SDK 0.3.0."""
+"""Strict world-graph capability contracts for SDK schema 4.0."""
 
 from __future__ import annotations
 
@@ -130,21 +130,62 @@ def test_host_external_write_remains_valid_without_prepared_contract():
     assert descriptor.exposure == CapabilityExposure.HOST
 
 
-def test_task_owned_resources_require_task_context():
-    with pytest.raises(ValidationError, match="task_context=required"):
-        CapabilityDescriptor.model_validate(
-            _capability(
-                effect="read",
-                consumes=[{"name": "action", "resource_type": "prepared_action"}],
-                produces=[
-                    {
-                        "result_path": ".shipment",
-                        "resource_type": "mrw.shipment",
-                        "output_name": "shipment",
-                    }
-                ],
-            )
+def test_task_context_defaults_to_optional_for_every_capability():
+    payload = _capability(
+        effect="read",
+        produces=[
+            {
+                "result_path": ".shipment",
+                "resource_type": "mrw.shipment",
+                "output_name": "shipment",
+            }
+        ],
+    )
+    payload["requirements"].pop("task_context")
+
+    descriptor = CapabilityDescriptor.model_validate(payload)
+
+    assert descriptor.requirements.task_context == "optional"
+
+
+def test_task_context_accepts_forbidden():
+    descriptor = CapabilityDescriptor.model_validate(
+        _capability(
+            effect="read",
+            requirements={
+                "authority": "read",
+                "audience": ["private_internal"],
+                "task_context": "forbidden",
+            },
+            produces=[
+                {
+                    "result_path": ".shipment",
+                    "resource_type": "mrw.shipment",
+                    "output_name": "shipment",
+                }
+            ],
         )
+    )
+
+    assert descriptor.requirements.task_context == "forbidden"
+
+
+def test_sdk_leaves_task_owned_resource_promotion_to_registry():
+    descriptor = CapabilityDescriptor.model_validate(
+        _capability(
+            effect="read",
+            consumes=[{"name": "action", "resource_type": "prepared_action"}],
+            produces=[
+                {
+                    "result_path": ".shipment",
+                    "resource_type": "mrw.shipment",
+                    "output_name": "shipment",
+                }
+            ],
+        )
+    )
+
+    assert descriptor.requirements.task_context == "optional"
 
 
 def test_model_read_requires_typed_output():

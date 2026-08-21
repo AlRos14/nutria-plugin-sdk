@@ -18,7 +18,7 @@ from nutria_plugin.manifest import (
 
 def _minimal_manifest(**overrides) -> dict:
     base = {
-        "schema_version": "3.0",
+        "schema_version": "4.0",
         "id": "test-plugin",
         "name": "Test Plugin",
         "version": "1.0.0",
@@ -118,7 +118,7 @@ def test_other_schema_versions_are_rejected(version):
 def test_schema_3_0_world_provider_accepts_custom_resource_type():
     manifest = PluginManifest.model_validate(
         _minimal_manifest(
-            schema_version="3.0",
+            schema_version="4.0",
             capabilities=[
                 {
                     "id": "workspace.search",
@@ -166,7 +166,7 @@ def test_schema_3_0_world_provider_accepts_custom_resource_type():
         )
     )
 
-    assert manifest.schema_version == "3.0"
+    assert manifest.schema_version == "4.0"
     assert manifest.world_providers[0].resource_types[0].id == "workspace.item"
 
 
@@ -174,7 +174,7 @@ def test_world_provider_rejects_unknown_capability_reference():
     with pytest.raises(ValidationError, match="unknown capability"):
         PluginManifest.model_validate(
             _minimal_manifest(
-                schema_version="3.0",
+                schema_version="4.0",
                 world_providers=[
                     {
                         "id": "workspace",

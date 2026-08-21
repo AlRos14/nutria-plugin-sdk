@@ -1,6 +1,6 @@
 # Python API reference
 
-SDK 0.3.1 exposes the strict schema 3.0 API.
+SDK 0.4.0 exposes the strict schema 4.0 API.
 
 ```python
 from nutria_plugin import (
@@ -39,7 +39,7 @@ manifest.to_file(Path("plugin.json"))
 payload = manifest.model_dump(mode="json", exclude_none=True)
 ```
 
-Validation is strict: schema version must be `3.0`, top-level extras are
+Validation is strict: schema version must be `4.0`, top-level extras are
 rejected, and capability/provider/action references are checked together.
 
 ## Bundles and packaging

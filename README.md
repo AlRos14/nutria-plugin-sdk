@@ -2,11 +2,11 @@
 
 SDK for building, validating, signing, and packaging Nutria plugins.
 
-Release `0.3.2` uses the intentionally breaking schema introduced in 0.3.0. It accepts only manifest schema
-`3.0`, requires typed capabilities and world providers, and makes authority,
-audience, task-context requirements, and exposure explicit. There is no runtime
-migration for schema 2.0/2.1 manifests and no compatibility/model-callability
-field.
+Release `0.4.0` accepts only manifest schema `4.0`. Capabilities use their real
+business effect (`read`, `write`, or `external_write`); preparation is expressed
+by producing `prepared_action`, not by a workflow-phase effect. Every parsed
+requirement resolves `task_context` to `required`, `optional`, or `forbidden`,
+with `optional` as the schema default. There is no legacy manifest compatibility.
 
 ChatBotNutralia owns task context, reviewable drafts, revisions, approval,
 idempotency, and completion receipts. Plugins own authoritative provider reads
@@ -15,7 +15,7 @@ and exact delivery of an approved snapshot.
 ## Install
 
 ```bash
-uv add nutria-plugin==0.3.2
+uv add nutria-plugin==0.4.0
 ```
 
 ## Scaffold and validate
@@ -30,11 +30,11 @@ The generated directory contains `plugin.json`, component directories for
 connections, skills, context documents, specs and hooks, plus an optional
 settings schema and assets.
 
-## Minimal schema 3.0 manifest
+## Minimal schema 4.0 manifest
 
 ```json
 {
-  "schema_version": "3.0",
+  "schema_version": "4.0",
   "id": "my-workspace-plugin",
   "name": "My Workspace Plugin",
   "version": "0.1.0",
@@ -79,11 +79,12 @@ settings schema and assets.
 }
 ```
 
-Every capability must declare `requirements` and `exposure`. Host/admin-only
-capabilities also require a safe `non_callable_reason`. Task-owned resources
-(`task`, `artifact`, `prepared_action`) require `task_context: "required"`.
-Every connection referenced by a capability must be represented by a matching
-world provider.
+Every capability must declare `requirements` and `exposure`. `task_context`
+defaults to `optional`; hosts resolve and may promote it to `required` when the
+capability consumes or produces task-owned resources such as `task`, `artifact`,
+or `prepared_action`. Host/admin-only capabilities also require a safe
+`non_callable_reason`. Every connection referenced by a capability must be
+represented by a matching world provider.
 
 For customer messages, use a host-owned `reviewable_actions` contract. Do not
 create plugin draft tables or native saved-draft tools. See

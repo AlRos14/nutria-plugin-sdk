@@ -1,10 +1,10 @@
 # Reviewable actions and external writes
 
-SDK 0.3.1 schema 3.0 defines one reviewable-action architecture:
+SDK 0.4.0 schema 4.0 defines one reviewable-action architecture:
 
 ```text
 ChatBotNutralia -> task context, encrypted draft, revision, approval, idempotency, receipts
-Plugin           -> provider reads, pure preparation, exact approved delivery
+Plugin           -> provider reads, preparation capability, exact approved delivery
 SDK              -> strict capability/provider/reviewable-action contracts
 ```
 
@@ -68,12 +68,13 @@ Every delivery maps `idempotency_key`. Required execution inputs must appear in
 the action map. Recipient, source/thread/order identities, channel, and mode are
 immutable; only explicitly editable fields can change.
 
-## Pure preparation
+## Preparation capability
 
-An optional reply-envelope preparation capability uses `effect: "prepare"`.
-It may resolve authoritative recipient/thread/source fingerprints but cannot
-persist a draft or write externally. The action's `prepare_capability` and
-`execute_capability` must be distinct and use the same connection.
+An optional reply-envelope preparation capability is identified structurally by
+producing `prepared_action`. It uses `read` when it only resolves authoritative
+recipient/thread/source fingerprints, or `write` when it mutates local durable
+state. The action's `prepare_capability` and `execute_capability` must be
+distinct and use the same connection.
 
 ## Host lifecycle
 

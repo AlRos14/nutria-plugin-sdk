@@ -1,14 +1,14 @@
 # plugin.json manifest reference
 
 `plugin.json` is the single source of truth for plugin identity, runtime,
-capability authority, and provider topology. SDK 0.3.1 accepts exactly schema
-`3.0`; older schemas and unknown fields fail validation.
+capability authority, and provider topology. SDK 0.4.0 accepts exactly schema
+`4.0`; older schemas and unknown fields fail validation.
 
 ## Required top-level fields
 
 | Field | Contract |
 |---|---|
-| `schema_version` | Literal `"3.0"` |
+| `schema_version` | Literal `"4.0"` |
 | `id` | Lowercase plugin slug |
 | `name`, `description`, `author` | Non-empty display metadata |
 | `version` | Semantic version |
@@ -19,23 +19,24 @@ capability authority, and provider topology. SDK 0.3.1 accepts exactly schema
 Optional fields include `default_scope`, `paths`, `required_secrets`,
 `optional_secrets`, `remote_endpoints`, `tags`, `reviewable_actions`,
 `admin_extensions`, `admin_flows`, `mcp_server_entry`, `homepage`, `license`,
-and `signature`. A `compatibility` field is not part of schema 3.0.
+and `signature`. A `compatibility` field is not part of schema 4.0.
 
 ## Capability descriptor
 
 Each capability declares:
 
 - stable `id`, `title`, and `description`;
-- `effect`: `read`, `prepare`, `write`, or `external_write`;
+- `effect`: `read`, `write`, or `external_write`;
 - concrete `tool` and optional `connection_id`;
 - typed `inputs`, `consumes`, and `produces` bindings;
-- required `requirements.authority`, `requirements.audience`, and
-  `requirements.task_context`;
+- required `requirements.authority` and `requirements.audience`, plus resolved
+  `requirements.task_context` (`required`, `optional`, or `forbidden`, default
+  `optional`);
 - required `exposure`: `model`, `host`, or `admin`.
 
 `host` and `admin` exposure require `non_callable_reason` with a stable code and
-safe summary. `model` exposure must not declare it. Task-owned resource bindings
-require `task_context: "required"`.
+safe summary. `model` exposure must not declare it. Hosts structurally promote
+task-owned resource bindings to effective `task_context: "required"`.
 
 A model-exposed `external_write` must declare `prepared_action`, `idempotency`,
 and `completion`. Reviewable delivery capabilities are instead host-only and
@@ -60,8 +61,9 @@ same manifest.
 The host owns the encrypted draft and approval lifecycle. A reviewable action
 maps stable semantic fields to one host-only external-write capability. Every
 delivery maps `recipient`, `body`, and `idempotency_key`; required capability
-inputs must be mapped. Preparation capabilities use `effect: "prepare"` and
-must be pure/read-only. See [reviewable-actions.md](reviewable-actions.md).
+inputs must be mapped. Preparation capabilities produce `prepared_action` and
+declare their actual `read` or `write` mutation scope. See
+[reviewable-actions.md](reviewable-actions.md).
 
 ## Paths and settings
 

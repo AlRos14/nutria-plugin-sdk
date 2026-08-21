@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.4.0
+
+- Replace the `prepare` effect with structural `prepared_action` outputs and the
+  capability's actual `read` or `write` mutation scope.
+- Resolve `requirements.task_context` universally with `optional` as the default
+  and support the `required | optional | forbidden` tri-state.
+- Allow host-owned task resources as capability outputs without requiring an
+  external world provider to claim them.
+- Accept only manifest schema 4.0; no legacy schema behavior is retained.
+
 ## 0.3.2
 
 - Add transport-neutral MCP result normalization for FastMCP scalar JSON envelopes.

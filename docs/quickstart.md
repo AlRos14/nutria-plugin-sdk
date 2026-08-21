@@ -1,9 +1,9 @@
-# Quickstart: a schema 3.0 plugin
+# Quickstart: a schema 4.0 plugin
 
 ## Install and scaffold
 
 ```bash
-uv add nutria-plugin==0.3.1
+uv add nutria-plugin==0.4.0
 nutria-plugin new inventory-lookup --name "Inventory Lookup"
 ```
 
@@ -11,7 +11,7 @@ nutria-plugin new inventory-lookup --name "Inventory Lookup"
 
 ```json
 {
-  "schema_version": "3.0",
+  "schema_version": "4.0",
   "id": "inventory-lookup",
   "name": "Inventory Lookup",
   "version": "0.1.0",
@@ -67,5 +67,5 @@ uv run nutria-plugin pack inventory-lookup \
   --output inventory-lookup-0.1.0.zip
 ```
 
-Any schema 2.0/2.1 field, unknown property, missing provider, or incomplete
+Any older-schema field, unknown property, missing provider, or incomplete
 authority/exposure contract fails validation and must be corrected explicitly.
