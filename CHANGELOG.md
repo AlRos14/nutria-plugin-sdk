@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.1
+
+- Allow a reviewable action's optional preparation helper to expose the actual
+  read/write envelope operation without falsely claiming a host-owned
+  `prepared_action` output.
+
 ## 0.4.0
 
 - Replace the `prepare` effect with structural `prepared_action` outputs and the

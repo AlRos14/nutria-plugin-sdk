@@ -2,7 +2,7 @@
 
 SDK for building, validating, signing, and packaging Nutria plugins.
 
-Release `0.4.0` accepts only manifest schema `4.0`. Capabilities use their real
+Release `0.4.1` accepts only manifest schema `4.0`. Capabilities use their real
 business effect (`read`, `write`, or `external_write`); preparation is expressed
 by producing `prepared_action`, not by a workflow-phase effect. Every parsed
 requirement resolves `task_context` to `required`, `optional`, or `forbidden`,
@@ -15,7 +15,7 @@ and exact delivery of an approved snapshot.
 ## Install
 
 ```bash
-uv add nutria-plugin==0.4.0
+uv add nutria-plugin==0.4.1
 ```
 
 ## Scaffold and validate

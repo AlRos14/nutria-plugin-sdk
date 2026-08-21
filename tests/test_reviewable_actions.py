@@ -44,9 +44,9 @@ def _capabilities():
             "connection_id": "email",
             "produces": [
                 {
-                    "result_path": ".prepared_action",
-                    "resource_type": "prepared_action",
-                    "output_name": "prepared_action",
+                    "result_path": ".thread",
+                    "resource_type": "email_thread",
+                    "output_name": "thread",
                 }
             ],
             "requirements": {
@@ -152,6 +152,12 @@ def _manifest(**overrides):
                         "title": "Email message",
                         "description": "One stable email message.",
                         "identity_fields": ["id"],
+                    },
+                    {
+                        "id": "email_thread",
+                        "title": "Email thread",
+                        "description": "One stable email thread.",
+                        "identity_fields": ["id"],
                     }
                 ],
             }
@@ -227,16 +233,31 @@ def test_reviewable_external_write_must_be_host_only():
         PluginManifest.model_validate(_manifest(capabilities=capabilities))
 
 
-def test_preparation_capability_is_identified_by_prepared_action_output():
+def test_preparation_capability_cannot_be_an_external_write():
     capabilities = _capabilities()
-    capabilities[0]["produces"] = [
+    capabilities[0]["effect"] = "external_write"
+    capabilities[0]["inputs"] = [
         {
-            "result_path": ".message",
-            "resource_type": "email_message",
-            "output_name": "message",
+            "kind": "value",
+            "semantic_field": "body",
+            "argument_name": "body",
+            "accepted_origins": ["current_user"],
         }
     ]
-    with pytest.raises(ValidationError, match="must produce prepared_action"):
+    capabilities[0].update({
+        "prepared_action": {
+            "preview_argument": "preview_only",
+            "preview_value": True,
+            "execute_value": False,
+            "ttl_seconds": 3600,
+        },
+        "idempotency": {
+            "argument_name": "idempotency_key",
+            "required_for_execution": True,
+        },
+        "completion": {"receipts": ["email.sent"]},
+    })
+    with pytest.raises(ValidationError, match="cannot use external_write"):
         PluginManifest.model_validate(_manifest(capabilities=capabilities))
 
 

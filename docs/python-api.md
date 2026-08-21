@@ -1,6 +1,6 @@
 # Python API reference
 
-SDK 0.4.0 exposes the strict schema 4.0 API.
+SDK 0.4.1 exposes the strict schema 4.0 API.
 
 ```python
 from nutria_plugin import (

@@ -480,15 +480,13 @@ class PluginManifest(BaseModel):
                         f"reviewable action {action.id!r} references unknown preparation capability "
                         f"{action.prepare_capability!r}"
                     )
-                prepared_outputs = {
-                    output.resource_type.value
-                    if isinstance(output.resource_type, ResourceType)
-                    else str(output.resource_type)
-                    for output in prepare.produces
-                }
-                if ResourceType.PREPARED_ACTION.value not in prepared_outputs:
+                if prepare.effect == CapabilityEffect.EXTERNAL_WRITE:
                     raise ValueError(
-                        "reviewable preparation capability must produce prepared_action"
+                        "reviewable preparation capability cannot use external_write"
+                    )
+                if prepare.exposure != CapabilityExposure.MODEL:
+                    raise ValueError(
+                        "reviewable preparation capability must be model-exposed"
                     )
                 if prepare.connection_id != action.connection_id:
                     raise ValueError(
