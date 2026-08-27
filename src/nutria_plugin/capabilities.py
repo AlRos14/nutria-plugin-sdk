@@ -155,6 +155,7 @@ class CapabilityInputBinding(BaseModel):
     resource_type: ResourceType | str | None = None
     required: bool = True
     sensitivity: Literal["safe", "personal"] = "safe"
+    requires_provenance: bool = False
     accepted_origins: list[Literal["current_user", "world_resource"]] = Field(min_length=1)
 
     model_config = {"extra": "forbid"}
@@ -172,8 +173,8 @@ class CapabilityInputBinding(BaseModel):
             raise ValueError("resource inputs require resource_type")
         if self.kind == "value" and self.resource_type is not None:
             raise ValueError("value inputs must not declare resource_type")
-        if self.sensitivity == "personal" and "current_user" not in self.accepted_origins:
-            raise ValueError("personal inputs must accept current_user evidence")
+        if self.kind == "resource" and "world_resource" not in self.accepted_origins:
+            raise ValueError("resource inputs must accept world_resource evidence")
         return self
 
 

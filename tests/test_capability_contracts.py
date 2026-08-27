@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from nutria_plugin import CapabilityDescriptor, CapabilityExposure
+from nutria_plugin import CapabilityDescriptor, CapabilityExposure, CapabilityInputBinding
 
 
 def _capability(**overrides):
@@ -200,19 +200,43 @@ def test_unknown_prepared_action_adapter_is_rejected():
         CapabilityDescriptor.model_validate(_capability(**contracts))
 
 
-def test_personal_input_requires_current_user_origin():
-    with pytest.raises(ValidationError, match="current_user"):
-        CapabilityDescriptor.model_validate(
-            _capability(
-                inputs=[
-                    {
-                        "kind": "value",
-                        "semantic_field": "recipient",
-                        "argument_name": "recipient",
-                        "sensitivity": "personal",
-                        "accepted_origins": ["world_resource"],
-                    }
-                ],
-                **_safety_contracts(),
-            )
+def test_personal_input_provenance_is_independent_from_sensitivity():
+    descriptor = CapabilityDescriptor.model_validate(
+        _capability(
+            inputs=[
+                {
+                    "kind": "value",
+                    "semantic_field": "recipient",
+                    "argument_name": "recipient",
+                    "sensitivity": "personal",
+                    "requires_provenance": True,
+                    "accepted_origins": ["world_resource"],
+                },
+                {
+                    "kind": "value",
+                    "semantic_field": "body",
+                    "argument_name": "body",
+                    "sensitivity": "personal",
+                    "requires_provenance": False,
+                    "accepted_origins": ["current_user", "world_resource"],
+                },
+            ],
+            **_safety_contracts(),
+        )
+    )
+
+    assert descriptor.inputs[0].requires_provenance is True
+    assert descriptor.inputs[1].requires_provenance is False
+
+
+def test_resource_input_requires_world_resource_origin():
+    with pytest.raises(ValidationError, match="world_resource"):
+        CapabilityInputBinding.model_validate(
+            {
+                "kind": "resource",
+                "semantic_field": "source_ref",
+                "argument_name": "source_ref",
+                "resource_type": "email_message",
+                "accepted_origins": ["current_user"],
+            }
         )
