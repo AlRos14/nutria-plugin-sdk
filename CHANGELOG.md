@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.2
+
+- Add the generic `requires_provenance` input-binding semantic while keeping
+  manifest schema version 4.0.
+- Keep personal-data sensitivity independent from accepted provenance origins;
+  personal inputs no longer implicitly require `current_user` authority.
+
 ## 0.4.1
 
 - Allow a reviewable action's optional preparation helper to expose the actual

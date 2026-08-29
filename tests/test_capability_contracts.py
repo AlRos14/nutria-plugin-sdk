@@ -229,6 +229,32 @@ def test_personal_input_provenance_is_independent_from_sensitivity():
     assert descriptor.inputs[1].requires_provenance is False
 
 
+def test_resource_input_rejects_redundant_requires_provenance():
+    payload = _capability(
+        effect="read",
+        inputs=[
+            {
+                "kind": "resource",
+                "semantic_field": "source_ref",
+                "argument_name": "source_ref",
+                "resource_type": "email_message",
+                "requires_provenance": True,
+                "accepted_origins": ["world_resource"],
+            }
+        ],
+        produces=[
+            {
+                "result_path": ".message",
+                "resource_type": "email_message",
+                "output_name": "message",
+            }
+        ],
+    )
+
+    with pytest.raises(ValidationError, match="already carry world_resource provenance"):
+        CapabilityDescriptor.model_validate(payload)
+
+
 def test_resource_input_requires_world_resource_origin():
     with pytest.raises(ValidationError, match="world_resource"):
         CapabilityInputBinding.model_validate(

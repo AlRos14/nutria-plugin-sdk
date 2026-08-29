@@ -1,7 +1,7 @@
 # plugin.json manifest reference
 
 `plugin.json` is the single source of truth for plugin identity, runtime,
-capability authority, and provider topology. SDK 0.4.1 accepts exactly schema
+capability authority, and provider topology. SDK 0.4.2 accepts exactly schema
 `4.0`; older schemas and unknown fields fail validation.
 
 ## Required top-level fields

@@ -173,6 +173,8 @@ class CapabilityInputBinding(BaseModel):
             raise ValueError("resource inputs require resource_type")
         if self.kind == "value" and self.resource_type is not None:
             raise ValueError("value inputs must not declare resource_type")
+        if self.kind == "resource" and self.requires_provenance:
+            raise ValueError("resource inputs already carry world_resource provenance")
         if self.kind == "resource" and "world_resource" not in self.accepted_origins:
             raise ValueError("resource inputs must accept world_resource evidence")
         return self

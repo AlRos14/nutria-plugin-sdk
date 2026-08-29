@@ -1,6 +1,6 @@
 # Reviewable actions and external writes
 
-SDK 0.4.1 schema 4.0 defines one reviewable-action architecture:
+SDK 0.4.2 schema 4.0 defines one reviewable-action architecture:
 
 ```text
 ChatBotNutralia -> task context, encrypted draft, revision, approval, idempotency, receipts
@@ -36,7 +36,7 @@ requirements, input bindings, and `reviewable_action_id`:
   },
   "reviewable_action_id": "whatsapp-text",
   "inputs": [
-    {"kind": "value", "semantic_field": "recipient", "argument_name": "recipient", "sensitivity": "personal", "accepted_origins": ["current_user", "world_resource"]},
+    {"kind": "value", "semantic_field": "recipient", "argument_name": "recipient", "sensitivity": "personal", "requires_provenance": true, "accepted_origins": ["current_user", "world_resource"]},
     {"kind": "value", "semantic_field": "body", "argument_name": "body", "sensitivity": "personal", "accepted_origins": ["current_user"]},
     {"kind": "value", "semantic_field": "idempotency_key", "argument_name": "idempotency_key", "sensitivity": "safe", "accepted_origins": ["current_user"]}
   ]
