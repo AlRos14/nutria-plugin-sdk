@@ -3,7 +3,7 @@
 Public API
 ----------
 Models:
-    PluginManifest, PluginPaths, PluginScope, PluginRuntimeType
+    PluginManifest, PluginPaths, PluginScope, PluginRuntimeType, CapabilityDomain
 
 Bundle operations:
     load_plugin_bundle, extract_plugin_bundle, validate_zip
@@ -15,7 +15,7 @@ Signing:
     generate_keypair, sign_manifest, verify_manifest, SignatureStatus
 """
 
-__version__ = "0.4.2"
+__version__ = "0.5.0"
 
 from .capabilities import (
     CapabilityDescriptor,
@@ -34,6 +34,7 @@ from .capabilities import (
     WorldProjectionDescriptor,
     WorldProviderDescriptor,
 )
+from .domains import CapabilityDomain, CAPABILITY_DOMAIN_IDS, DOMAIN_LABELS
 
 
 from .manifest import (
@@ -70,6 +71,9 @@ __all__ = [
     "PluginPaths",
     "PluginScope",
     "PluginRuntimeType",
+    "CapabilityDomain",
+    "CAPABILITY_DOMAIN_IDS",
+    "DOMAIN_LABELS",
     "PluginAdminExtension",
     "PluginAdminExtensionKind",
     "PluginAdminExtensionPlacement",

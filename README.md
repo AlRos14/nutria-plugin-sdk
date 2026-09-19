@@ -2,7 +2,7 @@
 
 SDK for building, validating, signing, and packaging Nutria plugins.
 
-Release `0.4.2` accepts only manifest schema `4.0`. Capabilities use their real
+Release `0.5.0` accepts only manifest schema `5.0`. Capabilities use their real
 business effect (`read`, `write`, or `external_write`); preparation is expressed
 by producing `prepared_action`, not by a workflow-phase effect. Every parsed
 requirement resolves `task_context` to `required`, `optional`, or `forbidden`,
@@ -15,7 +15,7 @@ and exact delivery of an approved snapshot.
 ## Install
 
 ```bash
-uv add nutria-plugin==0.4.2
+uv add nutria-plugin==0.5.0
 ```
 
 ## Scaffold and validate
@@ -30,11 +30,11 @@ The generated directory contains `plugin.json`, component directories for
 connections, skills, context documents, specs and hooks, plus an optional
 settings schema and assets.
 
-## Minimal schema 4.0 manifest
+## Minimal schema 5.0 manifest
 
 ```json
 {
-  "schema_version": "4.0",
+  "schema_version": "5.0",
   "id": "my-workspace-plugin",
   "name": "My Workspace Plugin",
   "version": "0.1.0",
@@ -47,6 +47,7 @@ settings schema and assets.
     "id": "workspace.search",
     "title": "Search workspace",
     "description": "Read matching workspace resources.",
+    "domains": ["products"],
     "effect": "read",
     "tool": "search_workspace",
     "connection_id": "workspace",

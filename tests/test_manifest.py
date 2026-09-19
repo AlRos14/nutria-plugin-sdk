@@ -18,7 +18,7 @@ from nutria_plugin.manifest import (
 
 def _minimal_manifest(**overrides) -> dict:
     base = {
-        "schema_version": "4.0",
+        "schema_version": "5.0",
         "id": "test-plugin",
         "name": "Test Plugin",
         "version": "1.0.0",
@@ -30,6 +30,7 @@ def _minimal_manifest(**overrides) -> dict:
                 "id": "test.health.read",
                 "title": "Read health",
                 "description": "Read current plugin health.",
+                "domains": ["products"],
                 "effect": "read",
                 "tool": "get_health",
                 "connection_id": "test",
@@ -104,9 +105,14 @@ def test_version_must_be_semver():
         PluginManifest.model_validate(_minimal_manifest(version="1.0"))
 
 
-def test_schema_version_must_be_3_0():
+def test_schema_version_must_be_5_0():
     with pytest.raises(ValidationError):
         PluginManifest.model_validate(_minimal_manifest(schema_version="1.1"))
+
+
+def test_schema_4_is_rejected_without_compatibility_mode():
+    with pytest.raises(ValidationError):
+        PluginManifest.model_validate(_minimal_manifest(schema_version="4.0"))
 
 
 @pytest.mark.parametrize("version", ["1.0", "2.0", "2.1", "2.2", "2.3"])
@@ -118,12 +124,13 @@ def test_other_schema_versions_are_rejected(version):
 def test_schema_3_0_world_provider_accepts_custom_resource_type():
     manifest = PluginManifest.model_validate(
         _minimal_manifest(
-            schema_version="4.0",
+            schema_version="5.0",
             capabilities=[
                 {
                     "id": "workspace.search",
                     "title": "Search workspace",
                     "description": "Find authoritative workspace items.",
+                    "domains": ["products"],
                     "effect": "read",
                     "tool": "search_workspace",
                     "connection_id": "workspace",
@@ -166,7 +173,7 @@ def test_schema_3_0_world_provider_accepts_custom_resource_type():
         )
     )
 
-    assert manifest.schema_version == "4.0"
+    assert manifest.schema_version == "5.0"
     assert manifest.world_providers[0].resource_types[0].id == "workspace.item"
 
 
@@ -174,7 +181,7 @@ def test_world_provider_rejects_unknown_capability_reference():
     with pytest.raises(ValidationError, match="unknown capability"):
         PluginManifest.model_validate(
             _minimal_manifest(
-                schema_version="4.0",
+                schema_version="5.0",
                 world_providers=[
                     {
                         "id": "workspace",

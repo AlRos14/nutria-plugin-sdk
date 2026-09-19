@@ -7,6 +7,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from .domains import CAPABILITY_DOMAIN_IDS, normalize_domains
+
 
 _RESOURCE_TYPE_PATTERN = r"^[a-z][a-z0-9_.-]{0,127}$"
 
@@ -276,6 +278,7 @@ class CapabilityDescriptor(BaseModel):
     id: str = Field(..., pattern=r"^[a-z][a-z0-9_.-]{0,127}$")
     title: str = Field(..., min_length=1, max_length=160)
     description: str = Field(..., min_length=1, max_length=2_000)
+    domains: list[str] = Field(..., min_length=1)
     effect: CapabilityEffect
     tool: str = Field(..., pattern=r"^[a-zA-Z][a-zA-Z0-9_-]{0,127}$")
     connection_id: str | None = Field(
@@ -295,6 +298,16 @@ class CapabilityDescriptor(BaseModel):
     )
 
     model_config = {"extra": "forbid"}
+
+    @field_validator("domains")
+    @classmethod
+    def _validate_domains(cls, value: list[str]) -> list[str]:
+        normalized = normalize_domains(value)
+        if len(normalized) != len(value):
+            raise ValueError("capability domains must not contain duplicates")
+        if any(domain not in CAPABILITY_DOMAIN_IDS for domain in normalized):
+            raise ValueError("capability domains must use the stable domain registry")
+        return list(normalized)
 
     @model_validator(mode="after")
     def _validate_contract(self) -> "CapabilityDescriptor":

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.0
+
+- Replace manifest schema 4.0 with schema 5.0.
+- Require every capability to declare one or more stable `CapabilityDomain`
+  identifiers.
+- Export the shared domain registry and reject unknown or duplicate domains.
+
 ## 0.4.2
 
 - Add the generic `requires_provenance` input-binding semantic while keeping

@@ -1,4 +1,4 @@
-"""Strict world-graph capability contracts for SDK schema 4.0."""
+"""Strict world-graph capability contracts for SDK schema 5.0."""
 
 from __future__ import annotations
 
@@ -13,6 +13,7 @@ def _capability(**overrides):
         "id": "shipping.create",
         "title": "Create shipment",
         "description": "Create one shipment after an exact preview.",
+        "domains": ["mrw"],
         "effect": "external_write",
         "tool": "create_shipment",
         "requirements": {
@@ -82,6 +83,21 @@ def test_missing_exposure_is_rejected():
     payload.pop("exposure")
     with pytest.raises(ValidationError, match="exposure"):
         CapabilityDescriptor.model_validate(payload)
+
+
+def test_domains_are_required_and_registry_bound():
+    payload = _capability(effect="read", produces=[{"result_path": ".shipment", "resource_type": "mrw.shipment", "output_name": "shipment"}])
+    payload.pop("domains")
+    with pytest.raises(ValidationError, match="domains"):
+        CapabilityDescriptor.model_validate(payload)
+
+    with pytest.raises(ValidationError, match="domain"):
+        CapabilityDescriptor.model_validate(_capability(domains=["shipping"]))
+
+
+def test_domains_must_not_repeat():
+    with pytest.raises(ValidationError, match="duplicates"):
+        CapabilityDescriptor.model_validate(_capability(domains=["mrw", "mrw"]))
 
 
 @pytest.mark.parametrize("exposure", ["host", "admin"])

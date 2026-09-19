@@ -39,6 +39,7 @@ def _capabilities():
             "id": "email.reply.prepare",
             "title": "Prepare email reply",
             "description": "Resolve the source email envelope without writing.",
+            "domains": ["email"],
             "effect": "read",
             "tool": "prepare_email_reply",
             "connection_id": "email",
@@ -60,6 +61,7 @@ def _capabilities():
             "id": "email.send.reply",
             "title": "Send email reply",
             "description": "Deliver the exact approved email reply.",
+            "domains": ["email"],
             "effect": "external_write",
             "tool": "send_resolved_email_reply",
             "connection_id": "email",
@@ -132,7 +134,7 @@ def _capabilities():
 
 def _manifest(**overrides):
     data = {
-        "schema_version": "4.0",
+        "schema_version": "5.0",
         "id": "email-plugin",
         "name": "Email",
         "version": "1.0.0",

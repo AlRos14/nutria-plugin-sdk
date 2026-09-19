@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.1",
+  "schema_version": "5.0",
   "id": "my-first-plugin",
   "name": "My First Plugin",
   "version": "0.1.0",

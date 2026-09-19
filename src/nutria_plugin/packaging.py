@@ -25,7 +25,7 @@ class PackagingError(Exception):
 SCAFFOLD_TEMPLATE = {
     "plugin.json": lambda plugin_id, name: json.dumps(
         {
-            "schema_version": "4.0",
+            "schema_version": "5.0",
             "id": plugin_id,
             "name": name,
             "version": "0.1.0",
@@ -40,6 +40,7 @@ SCAFFOLD_TEMPLATE = {
                     "id": f"{plugin_id}.health.read",
                     "title": "Read plugin health",
                     "description": "Read the current plugin connection health.",
+                    "domains": ["products"],
                     "effect": "read",
                     "tool": "get_health",
                     "connection_id": plugin_id,
