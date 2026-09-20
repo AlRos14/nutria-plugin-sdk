@@ -110,7 +110,7 @@ def test_schema_version_must_be_5_0():
         PluginManifest.model_validate(_minimal_manifest(schema_version="1.1"))
 
 
-def test_schema_4_is_rejected_without_compatibility_mode():
+def test_schema_4_is_rejected():
     with pytest.raises(ValidationError):
         PluginManifest.model_validate(_minimal_manifest(schema_version="4.0"))
 

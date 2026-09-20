@@ -40,10 +40,6 @@ ALLOWED_EXTENSIONS = {
     ".yml",
 }
 
-# Kept for backwards-compatible imports; no longer used in core validation.
-BLOCKED_PATTERNS = {".py", ".js", ".ts", ".sh", ".exe", ".dll", ".so", ".whl", ".tar"}
-
-
 class PluginBundleError(Exception):
     """Raised when a plugin ZIP is invalid, corrupt, or unsafe."""
 
