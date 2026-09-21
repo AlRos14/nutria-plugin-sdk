@@ -17,22 +17,24 @@ Examples:
 - `conn_mrw-shipping--sagec__TransmEnvio`
 - `conn_trello-workspace--trello__get_card`
 
-This name is used in `SKILL.md` `tools_required` and `authority_levels` fields,
-and in the Nutria approval log.
+This name identifies the provider tool behind a capability. Skills normally
+refer to canonical capability IDs in `capabilities_required`, not to generated
+physical tool names or runtime approval records.
 
-Tools named by a `reviewable_actions` contract are host-executor internals.
-ChatBotNutralia removes those execution/preparation tools from model-facing
-schemas and invokes them only after the host action has been approved.
+Tools named by a `reviewable_actions` contract belong to the manifest's
+provider/Host graph. The skill may explain the business action, but does not
+restate the preparation, execution, or approval lifecycle.
 
-## Authority levels
+## Capability effects
 
-Every tool must declare an authority level that controls approval requirements.
+Every capability declares its effect and structural requirements in
+`plugin.json`. A skill does not grant authority or control approval.
 
-| Level | Description |
+| Effect | Description |
 |-------|-------------|
-| `read` | Read-only query — no approval required |
-| `write_internal` | Writes to Nutria-internal state only — no external approval required |
-| `write_external` | Writes to an external system — requires human approval |
+| `read` | Read-only query with no external business mutation |
+| `write` | Local or internal mutation under Host authority |
+| `external_write` | External business effect governed by the declared capability contract |
 
 ---
 

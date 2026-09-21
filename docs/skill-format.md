@@ -1,201 +1,210 @@
-# SKILL.md — Format Reference
+# SKILL.md format
 
-A skill tells the persona *when* to use a plugin and *how*. Each skill lives
-in its own subdirectory under `skills/`:
+A skill is domain guidance for the Agent. It tells the Agent when a capability
+is useful and how to reason about the provider's business data. It is not a
+runtime authority declaration or an execution protocol.
 
-```
+Each skill lives in its own directory under `skills/`:
+
+```text
 skills/
   my-skill/
     SKILL.md
 ```
 
-A plugin can contain multiple skills. Each skill should address one coherent
-use case.
+The file contains YAML frontmatter followed by a Markdown body. Frontmatter is
+used for discovery and capability/provider projection; the body is disclosed as
+guidance when the skill is selected.
 
-## File structure
-
-A SKILL.md file has two parts:
-
-```
----
-YAML frontmatter
----
-
-Markdown body
-```
-
-The frontmatter is parsed by the Nutria runtime and controls activation and
-tool access. The markdown body is injected into the persona's system prompt
-when the skill is active.
-
-## Frontmatter reference
+## Frontmatter
 
 ```yaml
 ---
-name: my-skill                         # required — unique within the plugin
-display_name: My Skill                 # required — shown in admin UI
-version: 0.1.0                         # required — semver
-description: >                         # required — short summary
-  What this skill enables the persona to do.
-tools_required:                        # required — at least one tool
-  - conn_my-plugin--my-api__get_item
-  - conn_my-plugin--my-api__search_items
-authority_levels:                      # required — one entry per tool
-  conn_my-plugin--my-api__get_item: read
-  conn_my-plugin--my-api__search_items: read
-triggers:                              # optional — natural language phrases
-  - "check inventory"
-  - "is it in stock"
-  - "inventory lookup"
+name: warehouse-orders
+display_name: Warehouse Orders
+version: 0.1.0
+description: >-
+  Look up and create warehouse orders using the warehouse provider.
+capabilities_required:
+  - warehouse.orders.read
+  - warehouse.orders.create.prepare
+provider_ids:
+  - warehouse
+connection_id: warehouse
+requires_verified_connection: true
+fresh_source_capabilities:
+  - warehouse.orders.read
+triggers:
+  - "order status"
+  - "create order"
+metadata:
+  domain: orders
 ---
 ```
 
 ### `name`
 
-Unique skill identifier within the plugin. Lowercase, hyphens allowed.
-Used internally — not shown to end users.
+Required, unique within the plugin. Use lowercase letters, numbers, and hyphens.
 
 ### `display_name`
 
-Human-readable name shown in the Nutria admin UI and approval logs.
+Optional human-readable name for the admin UI.
 
 ### `version`
 
-Semver version of the skill definition itself. Update this when you change
-the skill behavior significantly.
+Optional semver-like skill content version. Bump it when the domain guidance
+changes materially.
 
 ### `description`
 
-One or two sentences describing the skill's purpose. Shown in the admin UI.
+Required short domain summary. Describe what the skill helps the Agent
+understand or do; do not describe Host approval, persistence, receipts, or
+internal action plumbing.
 
-### `tools_required`
+### `capabilities_required`
 
-List of tool names the skill may use. Uses the canonical tool name format:
+Capabilities whose knowledge/use this guidance depends on. This field does not grant a capability,
+authorize an operation, execute a provider call, or create an approval requirement. A capability must still be declared, available,
+authorized, and projected by the World/Host for the current turn.
 
+For an `external_write` capability with a declared prepared-action contract,
+the model-facing preparation capability is normally named with `.prepare`, for
+example:
+
+```yaml
+capabilities_required:
+  - warehouse.orders.read
+  - warehouse.orders.create.prepare
 ```
-conn_<plugin-id>--<connection-id>__<tool-name>
-```
 
-The persona will only have access to tools listed here when this skill is active.
+### Provider metadata
 
-### `authority_levels`
+Use `provider_ids` to identify provider guidance when a skill spans a known
+provider. Use `connection_id` and `requires_verified_connection` for guidance
+that only makes sense when one connection has been discovered and verified.
+Use `fresh_source_capabilities` to identify read capabilities that should ground
+current provider facts. These fields guide discovery; they do not grant access.
 
-Maps each tool to its authority level. This is the declaration — the
-connection file specifies the actual constraint, but the skill declares how
-it intends to use each tool.
-
-| Level | Behaviour |
-|-------|-----------|
-| `read` | No approval required |
-| `write_internal` | No external approval required |
-| `write_external` | Queued for human approval before execution |
+`metadata` is optional, non-authoritative domain metadata. Do not put secrets,
+authority decisions, action identifiers, or runtime state in it.
 
 ### `triggers`
 
-Optional list of natural language phrases that activate this skill. The
-persona matches incoming messages against these phrases to decide which
-skill is relevant. Phrases are matched loosely — you do not need exact wording.
+Optional natural-language phrases that help the router identify relevant
+domain guidance. Keep them concise and include ordinary user vocabulary in the
+languages used by the plugin.
 
-Tips:
-- Include both English and the primary language of your users
-- Include domain synonyms (`"waybill"` and `"tracking number"`)
-- Keep phrases concise — 2–5 words per phrase
+## Effects in the plugin contract
 
-## Body content
+The effect is declared by the capability in `plugin.json`, not by a skill:
 
-The body is injected into the persona's system prompt when the skill is
-active. Write it as instructions to the persona, not as documentation for
-developers.
+| Effect | Meaning |
+|---|---|
+| `read` | Does not cause an external business mutation. |
+| `write` | Local or internal mutation under Host authority. |
+| `external_write` | External business effect governed by exact-effect Host authorization, declared idempotency, and declared completion evidence. |
 
-### Recommended sections
+An `external_write` capability does not necessarily require a second human
+approval. The contract and current instruction determine the applicable path;
+the skill should describe only the business domain.
 
-**Purpose paragraph** — one sentence explaining what the skill does.
+## Where behavior belongs
 
-**Decision table** — when to use each tool:
+### Manifest / Capability
 
-```markdown
-| User intent          | Tool            | Needs approval |
-|----------------------|-----------------|----------------|
-| Look up a product    | get_product     | No             |
-| Place an order       | create_order    | Yes            |
-```
+Declare structural facts such as:
 
-**Parameter guide** — explain non-obvious fields, valid values, formats.
+- effect;
+- authority requirement and audience;
+- inputs and outputs;
+- resources and provider topology;
+- `prepared_action` contract;
+- idempotency contract;
+- completion evidence.
 
-**Error handling** — what to do when a tool returns an error.
+Reviewable actions may additionally declare `prepare_capability` and
+`execute_capability` in the manifest contract. These fields describe the
+provider/SDK graph; they are not instructions to copy into a skill body.
 
-**Notes** — edge cases, caveats, format conventions.
+### Skill
 
-### Style rules
+Teach domain meaning, for example:
 
-- Write in second person ("Use X to do Y", not "The skill uses X")
-- Be specific about parameter values — include valid enum values and formats
-- Keep the body under ~400 lines — longer prompts degrade LLM attention
-- Use tables for reference data (status codes, enum values, date formats)
+- when to use a capability;
+- business parameters and required facts;
+- provider-specific semantics;
+- business edge cases and reconciliation guidance;
+- how to verify the resulting business state with a provider read.
 
-## Complete example
+### Host
 
-```markdown
+The runtime owns exact effect binding, prepared-action persistence, the
+authorization lifecycle, execution, idempotency enforcement, operations,
+completion evidence, continuation, and reconciliation.
+
+Skills guide reasoning about the domain. They do not reimplement or explain the
+Host execution protocol.
+
+## Body guidance
+
+Write the body as concise instructions to the Agent. Include valid business
+parameter values, provider-specific constraints, and safe edge-case handling.
+Keep the body under roughly 400 lines.
+
+Good domain guidance includes:
+
+- required order fields and valid status values;
+- how to distinguish a reply from a new message;
+- how to identify an unambiguous shipment;
+- which provider read verifies a saved product state.
+
+Do not include runtime lifecycle instructions such as action storage,
+authorization objects, continuation references, execution helper names, receipt
+plumbing, or Host persistence mechanics. Removing that prose does not remove the
+lifecycle from the Agent: the runtime projects it structurally through the
+capability contract, World state, tool schemas, and structured results.
+
+## Example skill
+
+```yaml
 ---
-name: order-management
-display_name: Order Management
+name: warehouse-order-management
+display_name: Warehouse Order Management
 version: 0.1.0
-description: >
-  Create, cancel, and look up customer orders through the Warehouse API.
-tools_required:
-  - conn_warehouse--api__get_order
-  - conn_warehouse--api__create_order
-  - conn_warehouse--api__cancel_order
-authority_levels:
-  conn_warehouse--api__get_order: read
-  conn_warehouse--api__create_order: write_external
-  conn_warehouse--api__cancel_order: write_external
+description: >-
+  Look up and create warehouse orders with warehouse-specific business rules.
+capabilities_required:
+  - warehouse.orders.read
+  - warehouse.orders.create.prepare
+provider_ids:
+  - warehouse
 triggers:
   - "order status"
-  - "create order"
-  - "cancel order"
-  - "order lookup"
-  - "where is my order"
+  - "create warehouse order"
 ---
-
-# Order Management Skill
-
-## Purpose
-
-Look up customer orders, create new orders, and cancel existing ones using
-the Warehouse REST API.
-
-## Looking up an order
-
-Use `conn_warehouse--api__get_order` with the order ID. If the customer
-gives you an email instead of an ID, ask them to confirm the order ID from
-their confirmation email.
-
-## Creating an order
-
-Use `conn_warehouse--api__create_order`. **Requires approval.**
-
-Required fields:
-- `customer_id`: customer UUID
-- `sku`: product SKU code
-- `quantity`: integer, must be > 0
-- `delivery_address`: full street address
-
-Confirm all details with the customer before submitting.
-
-## Cancelling an order
-
-Use `conn_warehouse--api__cancel_order`. **Requires approval.**
-
-Only orders with `status: "pending"` or `status: "processing"` can be
-cancelled. If the status is `"shipped"`, inform the customer that cancellation
-is no longer possible.
-
-## Decision table
-
-| User intent           | Tool          | Needs approval |
-|-----------------------|---------------|----------------|
-| Check order status    | get_order     | No             |
-| Create new order      | create_order  | Yes            |
-| Cancel an order       | cancel_order  | Yes            |
 ```
+
+```markdown
+# Warehouse Order Management
+
+## When to use
+
+Use the order capabilities for status lookups, new orders, and provider
+reconciliation.
+
+## Required data
+
+For a new order, collect the customer reference, SKU, positive integer quantity,
+and complete delivery address. Preserve the provider's currency and any
+warehouse-specific shipping constraints.
+
+## Business rules
+
+Do not create an order for an unavailable SKU. If the provider reports an
+ambiguous result or timeout, inspect the same order reference before trying
+again. After creation, read the order back when the customer needs its current
+status or identifier.
+```
+
+The example explains what data and domain rules matter. It does not mention
+execution helpers, approval objects, or completion-evidence internals.
