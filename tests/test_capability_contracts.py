@@ -1,4 +1,4 @@
-"""Strict world-graph capability contracts for SDK schema 5.0."""
+"""Strict world-graph capability contracts for SDK schema 6.0."""
 
 from __future__ import annotations
 
@@ -15,6 +15,7 @@ def _capability(**overrides):
         "description": "Create one shipment after an exact preview.",
         "domains": ["mrw"],
         "effect": "external_write",
+        "effect_scope": "world",
         "tool": "create_shipment",
         "requirements": {
             "authority": "write_external",
@@ -27,7 +28,7 @@ def _capability(**overrides):
                 "kind": "value",
                 "semantic_field": "recipient",
                 "argument_name": "recipient",
-                "sensitivity": "personal",
+                "data_class": "personal_identifier",
                 "accepted_origins": ["current_user"],
             }
         ],
@@ -48,7 +49,7 @@ def _safety_contracts():
             "argument_name": "idempotency_key",
             "required_for_execution": True,
         },
-        "completion": {"receipts": ["shipping.shipment.created"]},
+        "completion": {"evidence": "declared", "receipts": ["shipping.shipment.created"], "basis": "provider_outcome"},
     }
 
 
@@ -60,7 +61,7 @@ def test_model_capability_requires_explicit_model_exposure():
                 {
                     "result_path": ".shipment",
                     "resource_type": "mrw.shipment",
-                    "output_name": "shipment",
+                    "output_name": "shipment", "data_class": "non_personal",
                 }
             ],
         )
@@ -76,7 +77,7 @@ def test_missing_exposure_is_rejected():
             {
                 "result_path": ".shipment",
                 "resource_type": "mrw.shipment",
-                "output_name": "shipment",
+                "output_name": "shipment", "data_class": "non_personal",
             }
         ],
     )
@@ -86,7 +87,7 @@ def test_missing_exposure_is_rejected():
 
 
 def test_domains_are_required_and_registry_bound():
-    payload = _capability(effect="read", produces=[{"result_path": ".shipment", "resource_type": "mrw.shipment", "output_name": "shipment"}])
+    payload = _capability(effect="read", produces=[{"result_path": ".shipment", "resource_type": "mrw.shipment", "output_name": "shipment", "data_class": "non_personal"}])
     payload.pop("domains")
     with pytest.raises(ValidationError, match="domains"):
         CapabilityDescriptor.model_validate(payload)
@@ -132,6 +133,7 @@ def test_host_external_write_remains_valid_without_prepared_contract():
     descriptor = CapabilityDescriptor.model_validate(
         _capability(
             exposure="host",
+            completion={"evidence": "declared", "receipts": ["shipping.shipment.created"], "basis": "provider_outcome"},
             requirements={
                 "authority": "write_external",
                 "audience": ["private_internal", "team_internal"],
@@ -153,7 +155,7 @@ def test_task_context_defaults_to_optional_for_every_capability():
             {
                 "result_path": ".shipment",
                 "resource_type": "mrw.shipment",
-                "output_name": "shipment",
+                "output_name": "shipment", "data_class": "non_personal",
             }
         ],
     )
@@ -177,7 +179,7 @@ def test_task_context_accepts_forbidden():
                 {
                     "result_path": ".shipment",
                     "resource_type": "mrw.shipment",
-                    "output_name": "shipment",
+                    "output_name": "shipment", "data_class": "non_personal",
                 }
             ],
         )
@@ -195,7 +197,7 @@ def test_sdk_leaves_task_owned_resource_promotion_to_registry():
                 {
                     "result_path": ".shipment",
                     "resource_type": "mrw.shipment",
-                    "output_name": "shipment",
+                    "output_name": "shipment", "data_class": "non_personal",
                 }
             ],
         )
@@ -224,7 +226,7 @@ def test_personal_input_provenance_is_independent_from_sensitivity():
                     "kind": "value",
                     "semantic_field": "recipient",
                     "argument_name": "recipient",
-                    "sensitivity": "personal",
+                    "data_class": "personal_identifier",
                     "requires_provenance": True,
                     "accepted_origins": ["world_resource"],
                 },
@@ -232,7 +234,7 @@ def test_personal_input_provenance_is_independent_from_sensitivity():
                     "kind": "value",
                     "semantic_field": "body",
                     "argument_name": "body",
-                    "sensitivity": "personal",
+                    "data_class": "personal_identifier",
                     "requires_provenance": False,
                     "accepted_origins": ["current_user", "world_resource"],
                 },
@@ -251,7 +253,7 @@ def test_resource_input_rejects_redundant_requires_provenance():
         inputs=[
             {
                 "kind": "resource",
-                "semantic_field": "source_ref",
+                "semantic_field": "source_ref", "data_class": "non_personal",
                 "argument_name": "source_ref",
                 "resource_type": "email_message",
                 "requires_provenance": True,
@@ -262,7 +264,7 @@ def test_resource_input_rejects_redundant_requires_provenance():
             {
                 "result_path": ".message",
                 "resource_type": "email_message",
-                "output_name": "message",
+                "output_name": "message", "data_class": "non_personal",
             }
         ],
     )
@@ -276,7 +278,7 @@ def test_resource_input_requires_world_resource_origin():
         CapabilityInputBinding.model_validate(
             {
                 "kind": "resource",
-                "semantic_field": "source_ref",
+                "semantic_field": "source_ref", "data_class": "non_personal",
                 "argument_name": "source_ref",
                 "resource_type": "email_message",
                 "accepted_origins": ["current_user"],

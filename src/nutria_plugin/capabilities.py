@@ -19,6 +19,30 @@ class CapabilityEffect(str, Enum):
     EXTERNAL_WRITE = "external_write"
 
 
+class EffectScope(str, Enum):
+    """Where a capability's effect lands, orthogonal to the read/write authority dimension.
+
+    ``effect_scope`` never decides what may complete an Objective. A completion expectation
+    exists only when the capability explicitly declares completion evidence.
+    """
+
+    AGENT_LOCAL = "agent_local"
+    INTERNAL_STATE = "internal_state"
+    LIFECYCLE = "lifecycle"
+    WORLD = "world"
+
+
+class DataClass(str, Enum):
+    """Disclosure class of one structured input or output field."""
+
+    NON_PERSONAL = "non_personal"
+    BUSINESS_RESOURCE_IDENTIFIER = "business_resource_identifier"
+    OPERATIONAL_IDENTIFIER = "operational_identifier"
+    PERSONAL_IDENTIFIER = "personal_identifier"
+    PERSONAL_CONTENT = "personal_content"
+    SPECIAL_CATEGORY = "special_category"
+
+
 class CapabilityExposure(str, Enum):
     """Who may invoke a graph-visible capability."""
 
@@ -56,25 +80,54 @@ class IdempotencyDescriptor(BaseModel):
     model_config = {"extra": "forbid"}
 
 
-class CompletionDescriptor(BaseModel):
-    """Authoritative receipt kinds required before a capability is complete."""
+CompletionBasis = Literal[
+    "provider_outcome",
+    "confirmed_mutation",
+    "verified_readback",
+    "delivery_confirmation",
+    "prepared_action",
+]
 
-    receipts: list[str] = Field(..., min_length=1)
+
+class CompletionDescriptor(BaseModel):
+    """Explicit completion contract of a non-read capability.
+
+    ``evidence="declared"``: the listed receipts, combined with ``basis``, establish the
+    effect. ``evidence="none"``: the capability produces no completion evidence and never
+    creates a completion expectation (terminal, notebook, scratch state).
+    """
+
+    evidence: Literal["declared", "none"]
+    receipts: list[str] = Field(default_factory=list)
+    basis: CompletionBasis | None = None
+    targets: Literal["single", "all_requested"] = "single"
 
     model_config = {"extra": "forbid"}
 
     @field_validator("receipts")
     @classmethod
     def _validate_receipts(cls, value: list[str]) -> list[str]:
-        cleaned = list(dict.fromkeys(item.strip() for item in value if item.strip()))
-        if not cleaned:
-            raise ValueError("completion receipts must not be empty")
-        for receipt in cleaned:
-            import re
+        import re
 
+        cleaned = list(dict.fromkeys(item.strip() for item in value if item.strip()))
+        for receipt in cleaned:
             if not re.fullmatch(r"^[a-z][a-z0-9_.-]{0,127}$", receipt):
                 raise ValueError("completion receipts must be stable lowercase identifiers")
         return cleaned
+
+    @model_validator(mode="after")
+    def _validate_evidence(self) -> "CompletionDescriptor":
+        if self.evidence == "declared":
+            if not self.receipts:
+                raise ValueError("declared completion evidence requires receipts")
+            if self.basis is None:
+                raise ValueError("declared completion evidence requires a basis")
+        else:
+            if self.receipts or self.basis is not None:
+                raise ValueError("completion evidence 'none' must not declare receipts or basis")
+            if self.targets != "single":
+                raise ValueError("completion evidence 'none' cannot constrain targets")
+        return self
 
 
 class ResourceType(str, Enum):
@@ -156,7 +209,7 @@ class CapabilityInputBinding(BaseModel):
     argument_name: str = Field(..., pattern=r"^[a-zA-Z][a-zA-Z0-9_-]{0,127}$")
     resource_type: ResourceType | str | None = None
     required: bool = True
-    sensitivity: Literal["safe", "personal"] = "safe"
+    data_class: DataClass
     requires_provenance: bool = False
     accepted_origins: list[Literal["current_user", "world_resource"]] = Field(min_length=1)
 
@@ -189,6 +242,7 @@ class CapabilityOutputBinding(BaseModel):
     resource_type: ResourceType | str
     output_name: str = Field(..., pattern=r"^[a-z][a-z0-9_.-]{0,127}$")
     many: bool = False
+    data_class: DataClass
 
     model_config = {"extra": "forbid"}
 
@@ -280,6 +334,7 @@ class CapabilityDescriptor(BaseModel):
     description: str = Field(..., min_length=1, max_length=2_000)
     domains: list[str] = Field(..., min_length=1)
     effect: CapabilityEffect
+    effect_scope: EffectScope
     tool: str = Field(..., pattern=r"^[a-zA-Z][a-zA-Z0-9_-]{0,127}$")
     connection_id: str | None = Field(
         default=None, pattern=r"^[a-zA-Z][a-zA-Z0-9_-]{0,127}$"
@@ -327,25 +382,36 @@ class CapabilityDescriptor(BaseModel):
         output_names = [item.output_name for item in self.produces]
         if len(output_names) != len(set(output_names)):
             raise ValueError("capability outputs must not repeat output names")
+        # --- effect / effect_scope / completion coherence -------------------------------
         if self.effect == CapabilityEffect.EXTERNAL_WRITE and self.exposure == CapabilityExposure.MODEL:
-            missing = [
-                name
-                for name, value in (
-                    ("prepared_action", self.prepared_action),
-                    ("idempotency", self.idempotency),
-                    ("completion", self.completion),
-                )
-                if value is None
-            ]
-            if missing:
+            if self.prepared_action is None:
+                raise ValueError("model-selectable external writes require prepared_action")
+        if self.effect == CapabilityEffect.READ:
+            if self.completion is not None:
+                raise ValueError("read capabilities observe; they must not declare completion")
+            if self.effect_scope == EffectScope.WORLD and self.prepared_action is not None:
+                raise ValueError("read capabilities cannot declare a prepared action")
+        else:
+            if self.completion is None:
                 raise ValueError(
-                    "model-selectable external writes require " + ", ".join(missing)
+                    "non-read capabilities must declare completion explicitly "
+                    "(evidence 'declared' or 'none')"
                 )
-            assert self.idempotency is not None
-            if not self.idempotency.required_for_execution:
+        if self.effect == CapabilityEffect.EXTERNAL_WRITE and self.effect_scope != EffectScope.WORLD:
+            raise ValueError("external_write capabilities must have effect_scope 'world'")
+        if self.effect_scope == EffectScope.AGENT_LOCAL:
+            if self.completion is not None and self.completion.evidence != "none":
+                raise ValueError("agent_local capabilities cannot declare completion evidence")
+        world_write = self.effect_scope == EffectScope.WORLD and self.effect != CapabilityEffect.READ
+        if world_write and self.exposure == CapabilityExposure.MODEL:
+            if self.completion is None or self.completion.evidence != "declared":
                 raise ValueError(
-                    "model-selectable external writes require execution idempotency"
+                    "model-selectable world writes require declared completion evidence"
                 )
+            if self.idempotency is None or not self.idempotency.required_for_execution:
+                raise ValueError("model-selectable world writes require execution idempotency")
+        if self.prepared_action is not None and self.effect == CapabilityEffect.READ:
+            raise ValueError("prepared_action requires a write capability")
         if self.exposure == CapabilityExposure.MODEL and self.effect == CapabilityEffect.READ:
             if not self.produces:
                 raise ValueError("model-selectable reads require declared outputs")

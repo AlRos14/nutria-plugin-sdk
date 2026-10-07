@@ -41,13 +41,14 @@ def _capabilities():
             "description": "Resolve the source email envelope without writing.",
             "domains": ["email"],
             "effect": "read",
+            "effect_scope": "world",
             "tool": "prepare_email_reply",
             "connection_id": "email",
             "produces": [
                 {
                     "result_path": ".thread",
                     "resource_type": "email_thread",
-                    "output_name": "thread",
+                    "output_name": "thread", "data_class": "non_personal",
                 }
             ],
             "requirements": {
@@ -63,6 +64,7 @@ def _capabilities():
             "description": "Deliver the exact approved email reply.",
             "domains": ["email"],
             "effect": "external_write",
+            "effect_scope": "world",
             "tool": "send_resolved_email_reply",
             "connection_id": "email",
             "consumes": [
@@ -73,46 +75,46 @@ def _capabilities():
                     "kind": "value",
                     "semantic_field": "recipient",
                     "argument_name": "recipient",
-                    "sensitivity": "personal",
+                    "data_class": "personal_identifier",
                     "accepted_origins": ["current_user", "world_resource"],
                 },
                 {
                     "kind": "value",
-                    "semantic_field": "body",
+                    "semantic_field": "body", "data_class": "non_personal",
                     "argument_name": "body",
                     "accepted_origins": ["current_user"],
                 },
                 {
                     "kind": "value",
-                    "semantic_field": "subject",
+                    "semantic_field": "subject", "data_class": "non_personal",
                     "argument_name": "subject",
                     "required": False,
                     "accepted_origins": ["current_user", "world_resource"],
                 },
                 {
                     "kind": "value",
-                    "semantic_field": "reply_target",
+                    "semantic_field": "reply_target", "data_class": "non_personal",
                     "argument_name": "reply_to_message_id",
                     "required": False,
                     "accepted_origins": ["world_resource"],
                 },
                 {
                     "kind": "value",
-                    "semantic_field": "source_ref",
+                    "semantic_field": "source_ref", "data_class": "non_personal",
                     "argument_name": "source_email_id",
                     "required": False,
                     "accepted_origins": ["world_resource"],
                 },
                 {
                     "kind": "value",
-                    "semantic_field": "source_fingerprint",
+                    "semantic_field": "source_fingerprint", "data_class": "non_personal",
                     "argument_name": "source_fingerprint",
                     "required": False,
                     "accepted_origins": ["world_resource"],
                 },
                 {
                     "kind": "value",
-                    "semantic_field": "idempotency_key",
+                    "semantic_field": "idempotency_key", "data_class": "non_personal",
                     "argument_name": "idempotency_key",
                     "accepted_origins": ["current_user"],
                 },
@@ -121,6 +123,11 @@ def _capabilities():
                 "authority": "write_external",
                 "audience": ["private_internal", "team_internal"],
                 "task_context": "required",
+            },
+            "completion": {
+                "evidence": "declared",
+                "receipts": ["email.sent"],
+                "basis": "delivery_confirmation",
             },
             "exposure": "host",
             "non_callable_reason": {
@@ -134,7 +141,7 @@ def _capabilities():
 
 def _manifest(**overrides):
     data = {
-        "schema_version": "5.0",
+        "schema_version": "6.0",
         "id": "email-plugin",
         "name": "Email",
         "version": "1.0.0",
@@ -241,7 +248,7 @@ def test_preparation_capability_cannot_be_an_external_write():
     capabilities[0]["inputs"] = [
         {
             "kind": "value",
-            "semantic_field": "body",
+            "semantic_field": "body", "data_class": "non_personal",
             "argument_name": "body",
             "accepted_origins": ["current_user"],
         }
@@ -257,7 +264,7 @@ def test_preparation_capability_cannot_be_an_external_write():
             "argument_name": "idempotency_key",
             "required_for_execution": True,
         },
-        "completion": {"receipts": ["email.sent"]},
+        "completion": {"evidence": "declared", "receipts": ["email.sent"], "basis": "provider_outcome"},
     })
     with pytest.raises(ValidationError, match="cannot use external_write"):
         PluginManifest.model_validate(_manifest(capabilities=capabilities))
@@ -266,10 +273,16 @@ def test_preparation_capability_cannot_be_an_external_write():
 def test_preparation_capability_may_use_its_actual_write_effect():
     capabilities = _capabilities()
     capabilities[0]["effect"] = "write"
+    capabilities[0]["effect_scope"] = "lifecycle"
+    capabilities[0]["completion"] = {
+        "evidence": "declared",
+        "receipts": ["prepared_action.stored"],
+        "basis": "prepared_action",
+    }
     capabilities[0]["inputs"] = [
         {
             "kind": "value",
-            "semantic_field": "body",
+            "semantic_field": "body", "data_class": "non_personal",
             "argument_name": "body",
             "accepted_origins": ["current_user"],
         }

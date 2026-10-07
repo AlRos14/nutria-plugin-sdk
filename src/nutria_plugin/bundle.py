@@ -118,11 +118,25 @@ def validate_zip(data: bytes) -> list[str]:
 
             if manifest is not None:
                 _validate_declared_admin_assets(zf, manifest, errors)
+                _validate_skill_files(zf, errors)
 
     except zipfile.BadZipFile as exc:
         errors.append(f"invalid zip file: {exc}")
 
     return errors
+
+
+def _validate_skill_files(zf: zipfile.ZipFile, errors: list[str]) -> None:
+    from .skills import SKILL_FILENAME, parse_skill_frontmatter
+
+    for name in zf.namelist():
+        path = PurePosixPath(name)
+        if path.name != SKILL_FILENAME or not path.parts or path.parts[0] != "skills":
+            continue
+        try:
+            parse_skill_frontmatter(zf.read(name).decode("utf-8"))
+        except Exception as exc:
+            errors.append(f"invalid skill {name!r}: {exc}")
 
 
 def _validate_declared_admin_assets(

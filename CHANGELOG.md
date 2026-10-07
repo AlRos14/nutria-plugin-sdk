@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.6.0
+
+Breaking: manifest schema 6.0 (5.0 is rejected). See `docs/migration-6.0.md`.
+
+- Add required `effect_scope` (`agent_local`, `internal_state`, `lifecycle`, `world`),
+  orthogonal to `effect`.
+- Make completion explicit: every non-read capability declares `evidence: none` or
+  `evidence: declared` with `receipts`, `basis` and `targets`. Hosts no longer synthesize
+  write receipts. Reads cannot declare completion.
+- Replace input `sensitivity` with `data_class` (six classes) on inputs and outputs.
+- Add `OperationFacts` and `validate_operation_facts`: handlers report facts; the host
+  classifies. Proves a declared completion is producible.
+- Reject skill frontmatter `triggers` (new `SkillFrontmatter`), in bundles too.
+- Add `nutria-plugin migrate` (5.0 to 6.0 with review report).
+- New validators: external writes live in the `world` scope, model-exposed world writes
+  need declared evidence and idempotency, agent-local capabilities cannot declare evidence.
+
 ## 0.5.0
 
 - Replace manifest schema 4.0 with schema 5.0.

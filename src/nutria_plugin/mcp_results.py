@@ -12,6 +12,8 @@ import json
 from collections.abc import Iterable, Mapping
 from typing import Any
 
+from .operation_facts import OperationFacts, extract_operation_facts
+
 
 class MCPResultContractError(ValueError):
     """Raised when a successful MCP result violates declared output bindings."""
@@ -101,4 +103,51 @@ def validate_capability_result(
         text_content=text_content,
     )
     validate_declared_outputs(payload, capability.get("produces") or ())
+    facts = extract_operation_facts(payload)
+    if facts is not None:
+        validate_operation_facts(capability, facts)
     return payload
+
+
+def validate_operation_facts(capability: Mapping[str, Any], facts: OperationFacts) -> None:
+    """Assert that reported facts are consistent with the capability's completion contract.
+
+    This is the SDK-side proof that a declared completion can actually be produced: a
+    handler that confirms a mutation must carry every declared receipt, and the facts must
+    match the declared basis. It never concludes ``completed`` (the host classifier does).
+    """
+
+    completion = capability.get("completion") or {}
+    evidence = completion.get("evidence")
+    receipts = set(completion.get("receipts") or ())
+    reported = set(facts.receipt_kinds)
+    if capability.get("effect") == "read":
+        if reported or facts.mutation != "none":
+            raise MCPResultContractError("read capabilities cannot report receipts or mutations")
+        return
+    if evidence == "none":
+        if reported:
+            raise MCPResultContractError(
+                "capability declares no completion evidence but reported receipts: "
+                + ", ".join(sorted(reported))
+            )
+        return
+    undeclared = reported - receipts
+    if undeclared:
+        raise MCPResultContractError(
+            "reported receipts not declared by the capability: " + ", ".join(sorted(undeclared))
+        )
+    if facts.mutation != "confirmed":
+        return
+    missing = receipts - reported
+    if missing:
+        raise MCPResultContractError(
+            "confirmed mutation is missing declared receipts: " + ", ".join(sorted(missing))
+        )
+    basis = completion.get("basis")
+    if basis == "verified_readback" and facts.verification != "verified":
+        raise MCPResultContractError("verified_readback basis requires verification 'verified'")
+    if basis == "delivery_confirmation" and facts.phase != "delivered":
+        raise MCPResultContractError("delivery_confirmation basis requires phase 'delivered'")
+    if completion.get("targets") == "all_requested" and facts.partial:
+        raise MCPResultContractError("all_requested targets cannot be confirmed while partial")

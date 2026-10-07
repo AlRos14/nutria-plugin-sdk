@@ -15,7 +15,7 @@ Signing:
     generate_keypair, sign_manifest, verify_manifest, SignatureStatus
 """
 
-__version__ = "0.5.0"
+__version__ = "0.6.0"
 
 from .capabilities import (
     CapabilityDescriptor,
@@ -24,7 +24,10 @@ from .capabilities import (
     CapabilityInputBinding,
     CapabilityOutputBinding,
     CapabilityRequirement,
+    CompletionBasis,
     CompletionDescriptor,
+    DataClass,
+    EffectScope,
     IdempotencyDescriptor,
     NonCallableReason,
     PreparedActionDescriptor,
@@ -62,7 +65,10 @@ from .mcp_results import (
     project_result_path,
     validate_capability_result,
     validate_declared_outputs,
+    validate_operation_facts,
 )
+from .operation_facts import OPERATION_FACTS_KEY, OperationFacts, TargetFact, extract_operation_facts
+from .skills import SkillFrontmatter, parse_skill_frontmatter
 
 __all__ = [
     "__version__",
@@ -90,7 +96,10 @@ __all__ = [
     "CapabilityInputBinding",
     "CapabilityOutputBinding",
     "CapabilityRequirement",
+    "CompletionBasis",
     "CompletionDescriptor",
+    "DataClass",
+    "EffectScope",
     "IdempotencyDescriptor",
     "NonCallableReason",
     "PreparedActionDescriptor",
@@ -120,4 +129,13 @@ __all__ = [
     "project_result_path",
     "validate_capability_result",
     "validate_declared_outputs",
+    "validate_operation_facts",
+    # Operation facts
+    "OPERATION_FACTS_KEY",
+    "OperationFacts",
+    "TargetFact",
+    "extract_operation_facts",
+    # Skills
+    "SkillFrontmatter",
+    "parse_skill_frontmatter",
 ]

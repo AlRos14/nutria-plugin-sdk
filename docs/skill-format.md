@@ -1,6 +1,6 @@
 # SKILL.md format
 
-A skill is domain guidance for the Agent. It tells the Agent when a capability
+A skill is domain guidance for the Agent. It tells the Agent how a capability
 is useful and how to reason about the provider's business data. It is not a
 runtime authority declaration or an execution protocol.
 
@@ -13,7 +13,7 @@ skills/
 ```
 
 The file contains YAML frontmatter followed by a Markdown body. Frontmatter is
-used for discovery and capability/provider projection; the body is disclosed as
+used for catalog awareness and capability/provider projection; the body is disclosed as
 guidance when the skill is selected.
 
 ## Frontmatter
@@ -34,9 +34,6 @@ connection_id: warehouse
 requires_verified_connection: true
 fresh_source_capabilities:
   - warehouse.orders.read
-triggers:
-  - "order status"
-  - "create order"
 metadata:
   domain: orders
 ---
@@ -88,11 +85,10 @@ current provider facts. These fields guide discovery; they do not grant access.
 `metadata` is optional, non-authoritative domain metadata. Do not put secrets,
 authority decisions, action identifiers, or runtime state in it.
 
-### `triggers`
+### No triggers
 
-Optional natural-language phrases that help the router identify relevant
-domain guidance. Keep them concise and include ordinary user vocabulary in the
-languages used by the plugin.
+Skills have no trigger or routing fields. The Agent decides whether to search for and
+load guidance. `triggers` (and any unknown frontmatter key) is rejected by the SDK.
 
 ## Effects in the plugin contract
 
@@ -178,9 +174,6 @@ capabilities_required:
   - warehouse.orders.create.prepare
 provider_ids:
   - warehouse
-triggers:
-  - "order status"
-  - "create warehouse order"
 ---
 ```
 

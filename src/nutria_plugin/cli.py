@@ -7,6 +7,7 @@ Commands:
   new       Scaffold a new plugin directory
   pack      Validate and pack a plugin directory into a ZIP bundle
   validate  Validate a plugin directory without packing
+  migrate   Migrate a 5.0 manifest to 6.0 and print the review items
 """
 
 from __future__ import annotations
@@ -115,6 +116,19 @@ def _cmd_validate(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_migrate(args: argparse.Namespace) -> int:
+    from .migrate import migrate_manifest_5_to_6
+
+    path = Path(args.manifest)
+    migrated, review = migrate_manifest_5_to_6(json.loads(path.read_text(encoding="utf-8")))
+    migrated.pop("signature", None)
+    path.write_text(json.dumps(migrated, indent=2) + "\n", encoding="utf-8")
+    print(f"Migrated {path} to schema 6.0 (signature removed; re-sign after review)")
+    for item in review:
+        print(f"  REVIEW: {item}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="nutria-plugin",
@@ -142,6 +156,9 @@ def main(argv: list[str] | None = None) -> int:
     p_validate = sub.add_parser("validate", help="Validate a plugin directory")
     p_validate.add_argument("dir", nargs="?", default=".", help="Plugin directory to validate")
 
+    p_migrate = sub.add_parser("migrate", help="Migrate a 5.0 plugin.json to 6.0")
+    p_migrate.add_argument("manifest", nargs="?", default="plugin.json")
+
     args = parser.parse_args(argv)
     handlers = {
         "keygen": _cmd_keygen,
@@ -149,6 +166,7 @@ def main(argv: list[str] | None = None) -> int:
         "new": _cmd_new,
         "pack": _cmd_pack,
         "validate": _cmd_validate,
+        "migrate": _cmd_migrate,
     }
     return handlers[args.command](args)
 

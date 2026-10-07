@@ -18,7 +18,7 @@ from nutria_plugin.manifest import (
 
 def _minimal_manifest(**overrides) -> dict:
     base = {
-        "schema_version": "5.0",
+        "schema_version": "6.0",
         "id": "test-plugin",
         "name": "Test Plugin",
         "version": "1.0.0",
@@ -32,6 +32,7 @@ def _minimal_manifest(**overrides) -> dict:
                 "description": "Read current plugin health.",
                 "domains": ["products"],
                 "effect": "read",
+                "effect_scope": "world",
                 "tool": "get_health",
                 "connection_id": "test",
                 "requirements": {
@@ -44,7 +45,7 @@ def _minimal_manifest(**overrides) -> dict:
                     {
                         "result_path": ".health",
                         "resource_type": "test.resource",
-                        "output_name": "health",
+                        "output_name": "health", "data_class": "non_personal",
                     }
                 ],
             }
@@ -105,7 +106,7 @@ def test_version_must_be_semver():
         PluginManifest.model_validate(_minimal_manifest(version="1.0"))
 
 
-def test_schema_version_must_be_5_0():
+def test_schema_version_must_be_6_0():
     with pytest.raises(ValidationError):
         PluginManifest.model_validate(_minimal_manifest(schema_version="1.1"))
 
@@ -124,7 +125,7 @@ def test_other_schema_versions_are_rejected(version):
 def test_schema_3_0_world_provider_accepts_custom_resource_type():
     manifest = PluginManifest.model_validate(
         _minimal_manifest(
-            schema_version="5.0",
+            schema_version="6.0",
             capabilities=[
                 {
                     "id": "workspace.search",
@@ -132,6 +133,7 @@ def test_schema_3_0_world_provider_accepts_custom_resource_type():
                     "description": "Find authoritative workspace items.",
                     "domains": ["products"],
                     "effect": "read",
+                    "effect_scope": "world",
                     "tool": "search_workspace",
                     "connection_id": "workspace",
                     "requirements": {
@@ -144,7 +146,7 @@ def test_schema_3_0_world_provider_accepts_custom_resource_type():
                         {
                             "result_path": ".items",
                             "resource_type": "workspace.item",
-                            "output_name": "items",
+                            "output_name": "items", "data_class": "non_personal",
                             "many": True,
                         }
                     ],
@@ -173,7 +175,7 @@ def test_schema_3_0_world_provider_accepts_custom_resource_type():
         )
     )
 
-    assert manifest.schema_version == "5.0"
+    assert manifest.schema_version == "6.0"
     assert manifest.world_providers[0].resource_types[0].id == "workspace.item"
 
 
@@ -181,7 +183,7 @@ def test_world_provider_rejects_unknown_capability_reference():
     with pytest.raises(ValidationError, match="unknown capability"):
         PluginManifest.model_validate(
             _minimal_manifest(
-                schema_version="5.0",
+                schema_version="6.0",
                 world_providers=[
                     {
                         "id": "workspace",

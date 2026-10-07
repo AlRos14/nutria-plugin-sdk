@@ -1,9 +1,9 @@
-# Quickstart: a schema 5.0 plugin
+# Quickstart: a schema 6.0 plugin
 
 ## Install and scaffold
 
 ```bash
-uv add nutria-plugin==0.5.0
+uv add nutria-plugin==0.6.0
 nutria-plugin new inventory-lookup --name "Inventory Lookup"
 ```
 
@@ -11,7 +11,7 @@ nutria-plugin new inventory-lookup --name "Inventory Lookup"
 
 ```json
 {
-  "schema_version": "5.0",
+  "schema_version": "6.0",
   "id": "inventory-lookup",
   "name": "Inventory Lookup",
   "version": "0.1.0",
@@ -26,6 +26,7 @@ nutria-plugin new inventory-lookup --name "Inventory Lookup"
     "description": "Read current stock for one SKU.",
     "domains": ["products"],
     "effect": "read",
+    "effect_scope": "world",
     "tool": "get_stock",
     "connection_id": "warehouse",
     "requirements": {
@@ -37,7 +38,8 @@ nutria-plugin new inventory-lookup --name "Inventory Lookup"
     "produces": [{
       "result_path": ".stock",
       "resource_type": "warehouse.stock",
-      "output_name": "stock"
+      "output_name": "stock",
+      "data_class": "non_personal"
     }]
   }],
   "world_providers": [{
