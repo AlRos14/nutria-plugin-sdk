@@ -7,6 +7,7 @@ Developer reference for SDK `0.6.0` and manifest schema `6.0`.
 | [quickstart.md](quickstart.md) | Build a strict schema 6.0 plugin |
 | [migration-6.0.md](migration-6.0.md) | Migrate a 5.0 plugin to 6.0 |
 | [manifest.md](manifest.md) | Manifest, capability, and provider contracts |
+| [capability-authoring.md](capability-authoring.md) | Effect scope, completion, operation facts, data classes, PreparedActions, validation errors |
 | [reviewable-actions.md](reviewable-actions.md) | Host-owned drafts and external delivery |
 | [python-api.md](python-api.md) | Public Python API |
 | [connection-types.md](connection-types.md) | Supported runtime/connection types |
