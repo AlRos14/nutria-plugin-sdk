@@ -31,6 +31,10 @@ class TargetFact(BaseModel):
     verified_fields: list[str] = Field(default_factory=list)
     mismatched_fields: list[str] = Field(default_factory=list)
     missing_effects: list[str] = Field(default_factory=list)
+    # Hierarchical operations: what this target effectively holds after the operation, and (observability
+    # only) how the provider physically represents it when that differs. Both are facts, not completion.
+    effective_values: dict[str, Any] = Field(default_factory=dict)
+    provider_representation: dict[str, Any] = Field(default_factory=dict)
 
     model_config = {"extra": "forbid"}
 

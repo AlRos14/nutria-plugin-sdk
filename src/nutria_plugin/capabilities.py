@@ -8,6 +8,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from .domains import CAPABILITY_DOMAIN_IDS, normalize_domains
+from .hierarchy import HierarchicalAttributeDescriptor
 
 
 _RESOURCE_TYPE_PATTERN = r"^[a-z][a-z0-9_.-]{0,127}$"
@@ -348,6 +349,7 @@ class CapabilityDescriptor(BaseModel):
     prepared_action: PreparedActionDescriptor | None = None
     idempotency: IdempotencyDescriptor | None = None
     completion: CompletionDescriptor | None = None
+    hierarchical_attributes: list[HierarchicalAttributeDescriptor] = Field(default_factory=list)
     reviewable_action_id: str | None = Field(
         default=None, pattern=r"^[a-z][a-z0-9-]{0,63}$"
     )
@@ -376,6 +378,11 @@ class CapabilityDescriptor(BaseModel):
             and self.exposure == CapabilityExposure.MODEL
         ):
             raise ValueError("reviewable delivery capabilities must be host-only")
+        attributes = [item.attribute for item in self.hierarchical_attributes]
+        if len(attributes) != len(set(attributes)):
+            raise ValueError("hierarchical_attributes must not repeat an attribute")
+        if self.hierarchical_attributes and self.effect == CapabilityEffect.READ:
+            raise ValueError("hierarchical attribute operations require a write capability")
         input_names = [item.semantic_field for item in self.inputs]
         if len(input_names) != len(set(input_names)):
             raise ValueError("capability inputs must not repeat semantic fields")

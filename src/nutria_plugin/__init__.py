@@ -38,6 +38,14 @@ from .capabilities import (
     WorldProviderDescriptor,
 )
 from .domains import CapabilityDomain, CAPABILITY_DOMAIN_IDS, DOMAIN_LABELS
+from .hierarchy import (
+    AttributeOperation,
+    ChildValue,
+    EffectiveAttributeState,
+    HierarchicalAttributeDescriptor,
+    OperationScope,
+    apply_attribute_operation,
+)
 
 
 from .manifest import (
@@ -97,6 +105,12 @@ __all__ = [
     "CapabilityOutputBinding",
     "CapabilityRequirement",
     "CompletionBasis",
+    "AttributeOperation",
+    "ChildValue",
+    "EffectiveAttributeState",
+    "HierarchicalAttributeDescriptor",
+    "OperationScope",
+    "apply_attribute_operation",
     "CompletionDescriptor",
     "DataClass",
     "EffectScope",

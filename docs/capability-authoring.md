@@ -84,7 +84,35 @@ capability, which must be pure and read-only and returns an exact preview. The H
 the host-only execution capability only after authorization, with idempotency and the declared receipt.
 Never re-resolve targets at execution time; execute exactly what the preview froze.
 
-## 6. Validation errors
+## 6. Hierarchical attribute operations
+
+An entity can own child entities (variants of an item, ads of a campaign, establishments of an
+organization, child resources of a configuration). The Agent decides **entity, children, attribute, value
+and scope**; the provider materializes it. The contract is domain-neutral (`nutria_plugin.hierarchy`):
+
+| Scope | Meaning |
+| --- | --- |
+| `self` | The value applies to the entity itself only. |
+| `selected_children` | The value applies to exactly the listed children (`targets`). |
+| `all_children` | The value applies to every relevant child. Any value a child held before, including a special one from an earlier operation, is replaced. |
+
+* `overrides` are explicit exceptions of **this operation only** (`all_children` with other values for named
+  children, e.g. creation "all at V, but B at X"). They are never remembered: a later `all_children`
+  operation replaces them. Do not model durable inheritance.
+* A capability declares what it supports per attribute with `hierarchical_attributes`
+  (`[{"attribute": "...", "scopes": ["all_children", ...]}]`). Different attributes may declare different
+  scopes. Only write capabilities may declare it; an attribute appears once.
+* `apply_attribute_operation` is the reference semantics (the oracle for contract tests);
+  `EffectiveAttributeState` is the canonical readback.
+* **Readback is the effective state**, not the provider's physical layout. If the provider stores a value on
+  the children and leaves the parent blank, report the effective values per child and put the physical
+  parent value in `provider_representation` (observability only). The Agent must never need to know how the
+  provider stores it.
+* Facts stay facts: report per-child `TargetFact.effective_values` and, on the parent target,
+  `provider_representation`. Completion is still concluded by the Host from the declared contract, and the
+  Agent decides whether the Objective is complete.
+
+## 7. Validation errors
 
 | Error | Fix |
 | --- | --- |

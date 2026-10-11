@@ -16,6 +16,13 @@ Breaking: manifest schema 6.0 (5.0 is rejected). See `docs/migration-6.0.md`.
 - Add `nutria-plugin migrate` (5.0 to 6.0 with review report).
 - New validators: external writes live in the `world` scope, model-exposed world writes
   need declared evidence and idempotency, agent-local capabilities cannot declare evidence.
+- Add provider-neutral hierarchical attribute operations (`nutria_plugin.hierarchy`):
+  `OperationScope` (`self`, `selected_children`, `all_children`), `AttributeOperation` (with
+  current-operation `overrides`), `apply_attribute_operation` (reference semantics: a global assignment
+  replaces earlier child values; exceptions are not durable), `EffectiveAttributeState` (canonical
+  readback with factual `provider_representation`) and the optional capability field
+  `hierarchical_attributes`. `TargetFact` gains optional `effective_values` and
+  `provider_representation`. Additive: no existing 6.0 manifest changes meaning.
 
 ## 0.5.0
 
