@@ -1,6 +1,6 @@
 # nutria-plugin SDK documentation
 
-Developer reference for SDK `0.6.0` and manifest schema `6.0`.
+Developer reference for SDK `0.6.1` and manifest schema `6.0`.
 
 | Document | Purpose |
 |---|---|

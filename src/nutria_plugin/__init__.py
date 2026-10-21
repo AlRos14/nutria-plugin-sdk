@@ -15,7 +15,7 @@ Signing:
     generate_keypair, sign_manifest, verify_manifest, SignatureStatus
 """
 
-__version__ = "0.6.0"
+__version__ = "0.6.1"
 
 from .capabilities import (
     CapabilityDescriptor,
@@ -36,6 +36,10 @@ from .capabilities import (
     ResourceTypeDescriptor,
     WorldProjectionDescriptor,
     WorldProviderDescriptor,
+)
+from .prepared_preview import (
+    PREVIEW_CONFORMANCE_VECTORS,
+    check_prepared_preview,
 )
 from .domains import CapabilityDomain, CAPABILITY_DOMAIN_IDS, DOMAIN_LABELS
 from .hierarchy import (
@@ -139,6 +143,9 @@ __all__ = [
     "verify_manifest",
     # MCP result contracts
     "MCPResultContractError",
+    # Prepared-preview conformance
+    "PREVIEW_CONFORMANCE_VECTORS",
+    "check_prepared_preview",
     "normalize_mcp_result",
     "project_result_path",
     "validate_capability_result",

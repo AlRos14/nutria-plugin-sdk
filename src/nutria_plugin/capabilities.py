@@ -348,6 +348,7 @@ class CapabilityDescriptor(BaseModel):
     non_callable_reason: NonCallableReason | None = None
     prepared_action: PreparedActionDescriptor | None = None
     idempotency: IdempotencyDescriptor | None = None
+    provider_default_arguments: list[str] = Field(default_factory=list)
     completion: CompletionDescriptor | None = None
     hierarchical_attributes: list[HierarchicalAttributeDescriptor] = Field(default_factory=list)
     reviewable_action_id: str | None = Field(
@@ -378,6 +379,24 @@ class CapabilityDescriptor(BaseModel):
             and self.exposure == CapabilityExposure.MODEL
         ):
             raise ValueError("reviewable delivery capabilities must be host-only")
+        if self.provider_default_arguments:
+            if self.prepared_action is None:
+                raise ValueError("provider_default_arguments require a prepared_action")
+            if len(set(self.provider_default_arguments)) != len(self.provider_default_arguments):
+                raise ValueError("provider_default_arguments must not repeat an argument")
+            optional_inputs = {
+                item.argument_name for item in self.inputs if not item.required
+            }
+            controls = {self.prepared_action.preview_argument}
+            if self.idempotency is not None:
+                controls.add(self.idempotency.argument_name)
+            for argument in self.provider_default_arguments:
+                if argument in controls:
+                    raise ValueError("provider_default_arguments must not name a control argument")
+                if argument not in optional_inputs:
+                    raise ValueError(
+                        "provider_default_arguments must name optional declared inputs"
+                    )
         attributes = [item.attribute for item in self.hierarchical_attributes]
         if len(attributes) != len(set(attributes)):
             raise ValueError("hierarchical_attributes must not repeat an attribute")

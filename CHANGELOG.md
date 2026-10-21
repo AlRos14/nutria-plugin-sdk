@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.6.1
+
+Additive; manifests that do not use the new field are unchanged.
+
+- Add optional `provider_default_arguments` on capabilities with a `prepared_action`: optional declared
+  inputs that the provider fills with its own default. Validated by `nutria-plugin validate`.
+- Add `check_prepared_preview` and `PREVIEW_CONFORMANCE_VECTORS`: one definition of the exact-preview
+  rule (snapshot arguments are declared tool arguments, required ones present, supplied ones echoed)
+  for plugin tests and hosts.
+- Document the preview rule and the `x-nutria-host-control` schema key.
+
 ## 0.6.0
 
 Breaking: manifest schema 6.0 (5.0 is rejected). See `docs/migration-6.0.md`.

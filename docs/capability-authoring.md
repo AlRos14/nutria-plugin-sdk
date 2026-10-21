@@ -84,6 +84,26 @@ capability, which must be pure and read-only and returns an exact preview. The H
 the host-only execution capability only after authorization, with idempotency and the declared receipt.
 Never re-resolve targets at execution time; execute exactly what the preview froze.
 
+The preview `arguments` are the re-executable call of the tool, not the provider's wire parameters:
+
+* every key is a declared argument of the tool (a Trello `list_id`, never the API's `idList`);
+* every required argument is present;
+* every argument the caller supplied is echoed with the same value, an empty string included. Provider
+  normalization may add subfields but never changes what was supplied.
+
+A provider may fill an optional argument with its own default (for example today's date). Declare it in
+`provider_default_arguments`: the host then accepts an unset or empty supplied value there and the filled
+value in the preview. A non-empty supplied value stays strict, and the declaration must name an optional
+declared input. Declare it in the manifest, which is signed, not in tool code.
+
+`nutria_plugin.check_prepared_preview(capability, input_schema, requested, snapshot)` is the single
+definition of this rule; call it in plugin tests with the schema your server exposes.
+`PREVIEW_CONFORMANCE_VECTORS` are shared cases that plugin tests and hosts both run against their own
+implementation.
+
+Schema extension keys the host understands on a tool argument: `x-nutria-host-control` (the host
+supplies the value, for example a state fingerprint). Anything else under `x-nutria-` is host-private.
+
 ## 6. Hierarchical attribute operations
 
 An entity can own child entities (variants of an item, ads of a campaign, establishments of an
