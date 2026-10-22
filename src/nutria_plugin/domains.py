@@ -15,6 +15,7 @@ class CapabilityDomain(str, Enum):
     MRW = "mrw"
     TRELLO = "trello"
     TASKS = "tasks"
+    EXTERNAL = "external"
 
 
 DOMAIN_LABELS: dict[CapabilityDomain, str] = {
@@ -25,6 +26,7 @@ DOMAIN_LABELS: dict[CapabilityDomain, str] = {
     CapabilityDomain.MRW: "MRW",
     CapabilityDomain.TRELLO: "Trello",
     CapabilityDomain.TASKS: "Tareas",
+    CapabilityDomain.EXTERNAL: "Servicios externos",
 }
 
 CAPABILITY_DOMAIN_IDS = frozenset(domain.value for domain in CapabilityDomain)

@@ -1,6 +1,6 @@
 # Python API reference
 
-SDK 0.6.1 exposes the strict schema 6.0 API.
+SDK 0.6.2 exposes the strict schema 6.0 API.
 
 ```python
 from nutria_plugin import (

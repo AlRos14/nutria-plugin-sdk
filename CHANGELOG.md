@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.2
+
+Additive.
+
+- Add the `external` capability domain (label "Servicios externos") for capabilities generated from client-connected
+  MCP servers that no plugin describes.
+
 ## 0.6.1
 
 Additive; manifests that do not use the new field are unchanged.

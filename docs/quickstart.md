@@ -3,7 +3,7 @@
 ## Install and scaffold
 
 ```bash
-uv add nutria-plugin==0.6.1
+uv add nutria-plugin==0.6.2
 nutria-plugin new inventory-lookup --name "Inventory Lookup"
 ```
 

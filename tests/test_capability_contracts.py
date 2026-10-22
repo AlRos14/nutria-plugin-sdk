@@ -284,3 +284,13 @@ def test_resource_input_requires_world_resource_origin():
                 "accepted_origins": ["current_user"],
             }
         )
+
+
+def test_external_domain_is_part_of_the_stable_registry() -> None:
+    from nutria_plugin import CAPABILITY_DOMAIN_IDS, DOMAIN_LABELS
+
+    assert "external" in CAPABILITY_DOMAIN_IDS
+    assert DOMAIN_LABELS["external"] == "Servicios externos"
+    assert CapabilityDescriptor.model_validate(_capability(domains=["external"], **_safety_contracts())).domains == [
+        "external"
+    ]
