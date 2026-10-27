@@ -27,3 +27,9 @@ A plugin that knows only who is a human (as the WhatsApp plugin did with `owners
 ## What a host must do
 Resolve the answering agent from the plugin's report and its own ownership record, with the priority above; release agent ownership when the agent closes the
 conversation, the contact asks to stop, a person takes over, or the conversation has been idle for the host's configured time.
+
+## Ids and granularity (new channels)
+- `contact_id` in the event is the unit that has one owner. Choose it per channel: a user for direct messages, a thread for channel threads.
+- Outbound recipients must use the same form as `contact_id`, so a message an agent sends is matched with the replies it receives.
+- The host keeps ids as written (trimmed, lowercased). Emails and phone numbers get a canonical form; nothing else is rewritten.
+
