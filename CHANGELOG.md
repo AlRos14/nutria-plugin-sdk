@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.6.3
+
+Additive.
+
+- Add `nutria_plugin.ownership`: `OwnerKind` (`human`, `agent`, `customer_service`), `ConversationOwnership` and
+  `ownership_from_event_payload`. One definition of who answers an outside person (priority human > agent > customer service,
+  a person's lock holds against every agent). Channel plugins report it as `conversation_ownership` in each inbound event;
+  the keys older plugins send (`ownership_state`, `human_owned`, `reply_blocked`) are still read. See `docs/conversation-ownership.md`.
+
 ## 0.6.2
 
 Additive.

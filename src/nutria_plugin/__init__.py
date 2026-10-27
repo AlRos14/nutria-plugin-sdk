@@ -15,7 +15,7 @@ Signing:
     generate_keypair, sign_manifest, verify_manifest, SignatureStatus
 """
 
-__version__ = "0.6.2"
+__version__ = "0.6.3"
 
 from .capabilities import (
     CapabilityDescriptor,
@@ -36,6 +36,12 @@ from .capabilities import (
     ResourceTypeDescriptor,
     WorldProjectionDescriptor,
     WorldProviderDescriptor,
+)
+from .ownership import (
+    OWNER_PRIORITY,
+    ConversationOwnership,
+    OwnerKind,
+    ownership_from_event_payload,
 )
 from .prepared_preview import (
     PREVIEW_CONFORMANCE_VECTORS,
@@ -84,6 +90,11 @@ from .skills import SkillFrontmatter, parse_skill_frontmatter
 
 __all__ = [
     "__version__",
+    # Conversation ownership
+    "OWNER_PRIORITY",
+    "ConversationOwnership",
+    "OwnerKind",
+    "ownership_from_event_payload",
     # Manifest
     "PluginManifest",
     "PluginPaths",
