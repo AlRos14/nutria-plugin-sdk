@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.7.0
+
+Additive; manifests that do not use the new field are unchanged.
+
+- Add `scope: "conversation_contact"` on a capability value input: the argument that names the person the conversation is with.
+  In a `public_customer` turn the host sets it itself, so neither the model nor the outside person chooses whose data is read.
+- New validators: only a `personal_identifier` value input of a read capability can be scoped (one per capability); a
+  `public_customer` capability must be a read, must not take another person-identifying input, and must scope an input when it
+  returns personal or special-category content.
+- Add `nutria_plugin.conversation_scope` (`scoped_argument`, `offered_to_outside_audience`, `apply_conversation_scope`): the one
+  definition of the pinning rule for hosts and plugin tests. See `docs/outside-audience.md`.
+
 ## 0.6.3
 
 Additive.

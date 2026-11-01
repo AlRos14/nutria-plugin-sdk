@@ -37,6 +37,12 @@ from .capabilities import (
     WorldProjectionDescriptor,
     WorldProviderDescriptor,
 )
+from .conversation_scope import (
+    CONVERSATION_CONTACT,
+    apply_conversation_scope,
+    offered_to_outside_audience,
+    scoped_argument,
+)
 from .ownership import (
     OWNER_PRIORITY,
     ConversationOwnership,
@@ -90,6 +96,11 @@ from .skills import SkillFrontmatter, parse_skill_frontmatter
 
 __all__ = [
     "__version__",
+    # Conversation scope for outside audiences
+    "CONVERSATION_CONTACT",
+    "apply_conversation_scope",
+    "offered_to_outside_audience",
+    "scoped_argument",
     # Conversation ownership
     "OWNER_PRIORITY",
     "ConversationOwnership",

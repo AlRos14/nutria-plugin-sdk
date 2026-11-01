@@ -76,3 +76,14 @@ status = verify_manifest(payload)
 ```
 
 Signing uses ECDSA P-256 over canonical JSON with the `signature` field removed.
+
+## Conversation scope
+
+```python
+from nutria_plugin import apply_conversation_scope, scoped_argument
+
+arguments = apply_conversation_scope(capability, {"chat": "whatever the model sent"}, contact="34600000000")
+```
+
+For a capability offered to `public_customer`, the argument declared with `scope: "conversation_contact"` is replaced by the
+conversation contact. See `outside-audience.md`.

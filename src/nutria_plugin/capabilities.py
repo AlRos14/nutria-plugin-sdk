@@ -213,6 +213,10 @@ class CapabilityInputBinding(BaseModel):
     data_class: DataClass
     requires_provenance: bool = False
     accepted_origins: list[Literal["current_user", "world_resource"]] = Field(min_length=1)
+    # ``conversation_contact``: this argument names the one person the conversation is with. When the host
+    # runs the capability for an outside audience it sets the argument itself, whatever the model sent
+    # or left empty. See ``nutria_plugin.conversation_scope``.
+    scope: Literal["conversation_contact"] | None = None
 
     model_config = {"extra": "forbid"}
 
@@ -225,6 +229,11 @@ class CapabilityInputBinding(BaseModel):
 
     @model_validator(mode="after")
     def _validate_kind(self) -> "CapabilityInputBinding":
+        if self.scope is not None:
+            if self.kind != "value":
+                raise ValueError("a conversation-scoped input must be a value input")
+            if self.data_class != DataClass.PERSONAL_IDENTIFIER:
+                raise ValueError("a conversation-scoped input must have data_class personal_identifier")
         if self.kind == "resource" and self.resource_type is None:
             raise ValueError("resource inputs require resource_type")
         if self.kind == "value" and self.resource_type is not None:
@@ -405,6 +414,32 @@ class CapabilityDescriptor(BaseModel):
         input_names = [item.semantic_field for item in self.inputs]
         if len(input_names) != len(set(input_names)):
             raise ValueError("capability inputs must not repeat semantic fields")
+        scoped = [item for item in self.inputs if item.scope is not None]
+        if len(scoped) > 1:
+            raise ValueError("a capability may scope only one input to the conversation contact")
+        if scoped and self.effect != CapabilityEffect.READ:
+            raise ValueError("only read capabilities may scope an input to the conversation contact")
+        if "public_customer" in self.requirements.audience:
+            if self.effect != CapabilityEffect.READ:
+                raise ValueError("only read capabilities may be offered to the public_customer audience")
+            others = [
+                item
+                for item in self.inputs
+                if item.scope is None and item.data_class == DataClass.PERSONAL_IDENTIFIER
+            ]
+            if others:
+                raise ValueError(
+                    "a public_customer capability must not take another person-identifying input: "
+                    "scope it to the conversation contact"
+                )
+            if not scoped and any(
+                out.data_class in {DataClass.PERSONAL_CONTENT, DataClass.SPECIAL_CATEGORY}
+                for out in self.produces
+            ):
+                raise ValueError(
+                    "a public_customer capability that returns personal content must scope an input "
+                    "to the conversation contact"
+                )
         output_names = [item.output_name for item in self.produces]
         if len(output_names) != len(set(output_names)):
             raise ValueError("capability outputs must not repeat output names")
